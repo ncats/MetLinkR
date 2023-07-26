@@ -100,14 +100,12 @@ queryRefMet <- function(mets){
 mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
                                    metab_col, CID_col){
 
-  #? include this?
-  #source("Credentials.R")
-  # pkg.globals <- RaMP::setConnectionToRaMP(
-  #   dbname = "ramp", username = "root", conpass = "",
-  #   host = "localhost"
-  # )
+  pkg.globals <- RaMP::setConnectionToRaMP(
+    dbname = "ramp", username = "root", conpass = "",
+    host = "localhost"
+  )
 
-  if(!exists("setConnectionToRaMP")){
+  if(!exists("pkg.globals")){
     stop("Please install and connect to RaMP")
   }
 
