@@ -63,7 +63,7 @@ runHarmonization <- function(inputcsv, outputFileName, writecsv){
     )
   }
 
-  mapped_list_input_filesmets <- lapply(mapped_list_input_files, function(x) x[1])
+  mapped_list_input_filesmets <- lapply(mapped_list_input_files, function(x) x[[1]])
   names(mapped_list_input_filesmets)<-myinputfiles$ShortFileName
 
   outputFileName <- harmonizefiles(fileList = mapped_list_input_filesmets,
