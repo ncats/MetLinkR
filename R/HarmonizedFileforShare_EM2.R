@@ -71,6 +71,7 @@ runHarmonization <- function(inputcsv, outputFileName, writecsv){
 
   row.names(outputFileName) <- NULL
   outputFileName <- outputFileName[!duplicated(outputFileName),]
+  browser()
   if (writecsv){
     utils::write.csv(outputFileName, paste0(outputFileName, ".csv"))
   }

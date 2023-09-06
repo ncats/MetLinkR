@@ -25,7 +25,6 @@
 #' \dontrun{
 #' updatedf <- replaceEmptys(input_df = data.frame(A = c("", "B"), B = c("C", "E")))
 #' }
-#' @export
 #'
 
 replaceEmptys <- function(input_df){
@@ -48,8 +47,7 @@ replaceEmptys <- function(input_df){
 #' \dontrun{
 #' queryResults <- queryRefMet(mets = "2'-Deoxyuridine")
 #' }
-#' @export
-#'
+#' 
 
 queryRefMet <- function(mets){
   res <- httr::RETRY("POST", "https://www.metabolomicsworkbench.org/databases/refmet/name_to_refmet_new_min.php",
@@ -96,23 +94,22 @@ queryRefMet <- function(mets){
 #' filename = "Original File", HMDB_col = "HMDB_ids",
 #' metab_col = "metab_name", CID_col = "pubchem")
 #' }
+#' @export
 
 mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
                                    metab_col, CID_col){
+  print(filename)
 
-  pkg.globals <- RaMP::setConnectionToRaMP(
-    dbname = "ramp", username = "root", conpass = "",
-    host = "localhost"
-  )
+ RaMP::setConnectionToRaMP(is_sqlite=T)
 
-  if(!exists("pkg.globals")){
-    stop("Please install and connect to RaMP")
-  }
+  ## if(!exists("pkg.globals")){
+  ##   stop("Please install and connect to RaMP")
+  ## }
 
-  if (file.exists(paste0(filename, ".rds"))){
-    filteredMetMappings <- readRDS(paste0(filename, ".rds"))
-    return(filteredMetMappings)
-  }
+  ## if (file.exists(paste0(filename, ".rds"))){
+  ##   filteredMetMappings <- readRDS(paste0(filename, ".rds"))
+  ##   return(filteredMetMappings)
+  ## }
 
   ## Replace empty cells with NA
   #' @importFrom magrittr %>%
@@ -138,7 +135,7 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
 
   refMetMappings <- queryRefMet(id_vector)
 
-  noRefMet = refMetMappings %>% dplyr::filter("Standardized name"=="-"|"Standardized name" == "")
+  noRefMet = refMetMappings %>% dplyr::filter(`Standardized name`=="-"|`Standardized name` == "")
 
   print(paste0("RefMet found ", round((1-nrow(noRefMet)/nrow(input_df))*100,1), "% of input metabolites outright"))
   ## If there's an HMDB, report directly. If not, map HMDB, Name, then PubChem to RaMP.
@@ -305,7 +302,6 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
             tempmolCheck <- stats::na.omit(molCheck)
             minVal <- as.numeric(min(tempmolCheck$mw))
             if(all(tempmolCheck$mw <= minVal*1.1)){
-              browser()
               checkIds <- cbind(rampId, rep(TRUE, nrow(rampId)))
             }
             molFormulas <- molCheck %>% dplyr::group_by("ramp_id") %>% dplyr::summarize_all(~ paste(unique(.), collapse = '||', sep = ""))
@@ -324,10 +320,11 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
           }
         }
       }, error = function(err){
-        browser()
       }
     )
-
+    if(nrow(checkIds)==0 | length(checkIds)==0){
+      checkIds <- data.frame(matrix(ncol=2,nrow=0))
+    }
     colnames(checkIds) <- c("rampId", "valid")
     return (checkIds)
   }
@@ -340,7 +337,6 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
   synNamefromId <- character(0)
   checkValid <- data.frame()
   classCheck <- data.frame()
-
   allFound <- rbind(foundId, foundName)
   #Get synonyms for RaMP-mapped HMDB ids
   for (id in foundId$sourceId){
@@ -380,6 +376,8 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
 
   }
 
+
+
   ## Get synonyms for RaMP-mapped common names
   for (id in foundName$commonName){
 
@@ -395,7 +393,7 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
     querywRampn <- paste0("SELECT DISTINCT rampId, Synonym FROM analyteSynonym WHERE rampId in (", toString(sapply(resRampId, shQuote)), ")")
     resRampIdn <- RMariaDB::dbGetQuery(con, querywRampn)
     resRampIdn <- resRampIdn[resRampIdn$"Synonym" != id, ]
-    resRampIdn <- resRampIdn %>% stats::na.omit
+    resRampIdn <-  stats::na.omit(resRampIdn)
 
     if (nrow(resRampIdn) != 0){
       int <- dplyr::full_join(resRampIdn, checkValid, by = "rampId", relationship = "many-to-many")
@@ -443,8 +441,12 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
       queryForSyn <- paste0("SELECT DISTINCT rampId, Synonym FROM analyteSynonym WHERE rampId in (", toString(sapply(resmet, shQuote)), ")")
       resSyn <- RMariaDB::dbGetQuery(con, queryForSyn)
       resSyn <- resSyn[resSyn$"Synonym" != mets,]
-
-      int <- dplyr::full_join(resSyn, checkValid, by = "rampId", relationship = "many-to-many")
+      if(is.logical(checkValid$`rampId`)){
+        int <- resSyn
+        int$valid=TRUE
+      }else{
+        int <- dplyr::full_join(resSyn, checkValid, by = "rampId", relationship = "many-to-many")
+      }
       classCheck <- rbind(classCheck, int)
 
       resSyn <- as.data.frame(resSyn$"Synonym")
@@ -474,14 +476,15 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
   ## Follow up refMet query for missed metabolites
   for (grp in 1:length(synNamefromId)){
     inspectSynList <- unlist(synNamefromId[grp])
+    if(length(inspectSynList) > 100){
+      inspectSynList <- inspectSynList[1:100]
+    }
     inspectSynList <- paste0(inspectSynList, collapse = "\n")
-
     newrefMetMappings <- queryRefMet(inspectSynList)
     newrefMetMappings <- newrefMetMappings %>% dplyr::filter ("Standardized name" != "-")
 
 
     if(nrow(newrefMetMappings) != 0){
-      #browser()
       #`Original Input` <- origToSyn$OrigName[origToSyn$Synonym %in% newrefMetMappings$`Input name`]
       classChecksub <- subset(classCheck, select = c("Synonym", "valid"))
       int <- classChecksub[(classChecksub$"Synonym" %in% newrefMetMappings$`Input name`),]
@@ -627,6 +630,7 @@ utils::globalVariables(".")
 #' @param filterOnlyOne boolean for whether to include or exclude metabolites mapped in only one file
 #'
 #' @return dataframe of metabolites harmonized across all files
+#' @export
 
 harmonizefiles <- function(fileList, filterOnlyOne) {
 
@@ -648,7 +652,7 @@ harmonizefiles <- function(fileList, filterOnlyOne) {
   results_list <- vector("list", length(fileList))
 
   for (i in seq_along(fileList)) {
-    file <- fileList[[i]]
+    file <- fileList[[i]][[1]]
     matching_rows <- file[!is.na(file$`Standardized name`) & file$`Standardized name` %in% nothingdf$HarmonizedName, ]
     norampuse <- matching_rows[matching_rows$`Original Input` == matching_rows$`Input name`,]
     rampuse <- matching_rows[matching_rows$`Original Input` != matching_rows$`Input name`,]
@@ -681,13 +685,17 @@ harmonizefiles <- function(fileList, filterOnlyOne) {
     toExamineIndices <- which(toAdd$colOfOrigin == "toExamine")
 
     newCol <- apply(toExamine, 1, function (x){
-      inputsToEx <- unlist(strsplit(x[1], ";"))
-      origToLookAt <- ifelse(!is.na(inputsToEx) & inputsToEx %in% norampuse$`Original Input`,
-                             ifelse(grepl("HMDB", inputsToEx), "fromHMDB", "fromMetaboliteName"),
-                             ifelse(!is.na(inputsToEx) & inputsToEx %in% rampuse$`Original Input`,
-                                    ifelse(grepl("HMDB", inputsToEx), "fromrampusingHMDB", "fromrampusingMetaboliteName"), "-"))
-      toAdd <- paste(unique(origToLookAt), collapse = ";")
-      return(toAdd)
+      if(class(x[1])=="character"){
+        inputsToEx <- unlist(strsplit(x[1], ";"))
+        origToLookAt <- ifelse(!is.na(inputsToEx) & inputsToEx %in% norampuse$`Original Input`,
+                               ifelse(grepl("HMDB", inputsToEx), "fromHMDB", "fromMetaboliteName"),
+                               ifelse(!is.na(inputsToEx) & inputsToEx %in% rampuse$`Original Input`,
+                                      ifelse(grepl("HMDB", inputsToEx), "fromrampusingHMDB", "fromrampusingMetaboliteName"), "-"))
+        toAdd <- paste(unique(origToLookAt), collapse = ";")
+        return(toAdd)
+      }else{
+        return(NA)
+      }
 
     })
 
@@ -696,7 +704,9 @@ harmonizefiles <- function(fileList, filterOnlyOne) {
     names(toAdd) <- c(paste0("file", i),paste0("origin_file", i))
 
     nothingdf <- cbind(intermediatedf, toAdd)
-    nothingdf <- nothingdf %>% dplyr::select(-"mapped_inputs")
+    if("mapped_inputs" %in% colnames(nothingdf)){
+      nothingdf <- nothingdf %>% dplyr::select(-"mapped_inputs")
+    }
   }
   nothingdf <- nothingdf[!duplicated(nothingdf), ]
   nothingdf <- replace(nothingdf,nothingdf=="","-")
