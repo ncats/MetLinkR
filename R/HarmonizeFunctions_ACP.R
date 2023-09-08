@@ -633,7 +633,7 @@ utils::globalVariables(".")
 #' @export
 
 harmonizefiles <- function(fileList, filterOnlyOne) {
-
+  browser()
   nothingdf <- data.frame(matrix(ncol = 1, nrow = 0))
   colnames(nothingdf) <- c("HarmonizedName") #naming empty data frame
   #fileList <- list(filetoharmonize1, filetoharmonize2, filetoharmonize3, filetoharmonize4, filetoharmonize5)
@@ -647,21 +647,25 @@ harmonizefiles <- function(fileList, filterOnlyOne) {
       nothingdf <- rbind(nothingdf, data.frame("HarmonizedName" = unique_vals))
     }
   }
-  rm()
 
   results_list <- vector("list", length(fileList))
 
   for (i in seq_along(fileList)) {
-    file <- fileList[[i]][[1]]
+    file <- fileList[[i]]
     matching_rows <- file[!is.na(file$`Standardized name`) & file$`Standardized name` %in% nothingdf$HarmonizedName, ]
     norampuse <- matching_rows[matching_rows$`Original Input` == matching_rows$`Input name`,]
-    rampuse <- matching_rows[matching_rows$`Original Input` != matching_rows$`Input name`,]
+    if(any(matching_rows$`Original Input` != matching_rows$`Input name`,na.rm=TRUE)){
+      rampuse <- matching_rows[matching_rows$`Original Input` != matching_rows$`Input name`,]
+    }else{
+      rampuse <- data.frame(`Original Input` = NA)
+      colnames(rampuse) <- 'Original Input'
+    }
 
     inputs <- data.frame(matching_rows$`Original Input`, matching_rows$`Standardized name`)
     names(inputs) <- c("OrigInput", "HarmonizedName")
 
     mapped_inputs <- sapply(nothingdf$"HarmonizedName", function(x){
-      inputFiltered <- inputs %>% dplyr::filter("HarmonizedName"==x)
+      inputFiltered <- inputs %>% dplyr::filter(`HarmonizedName`==x)
       uniqueValues <- unique(inputFiltered$OrigInput)
       toReturn <- paste0(uniqueValues,collapse = ";")
       return (toReturn)

@@ -66,15 +66,14 @@ runHarmonization <- function(inputcsv, outputFileName, writecsv){
   mapped_list_input_filesmets <- lapply(mapped_list_input_files, function(x) x[[1]])
   names(mapped_list_input_filesmets)<-myinputfiles$ShortFileName
 
-  outputFileName <- harmonizefiles(fileList = mapped_list_input_filesmets,
+  outputFile <- harmonizefiles(fileList = mapped_list_input_filesmets,
                                    filterOnlyOne = FALSE)
 
-  row.names(outputFileName) <- NULL
-  outputFileName <- outputFileName[!duplicated(outputFileName),]
-  browser()
+  row.names(outputFile) <- NULL
+  outputFile <- outputFile[!duplicated(outputFile),]
   if (writecsv){
-    utils::write.csv(outputFileName, paste0(outputFileName, ".csv"))
+    utils::write.csv(outputFile, file = paste0(outputFileName, ".csv"))
   }
-  return(outputFileName)
+  return(outputFile)
 
 }
