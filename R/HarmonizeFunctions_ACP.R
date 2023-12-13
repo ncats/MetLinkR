@@ -38,7 +38,7 @@ replaceEmptys <- function(input_df){
   return(input_df)
 }
 
-#' Query RefMet for standardized names
+#' Query RefMet for standardized names. Code from Eoin Fahy, received on 5/8/2023
 #'
 #' @param mets a string of metabolites separated by newline
 #'
@@ -48,7 +48,6 @@ replaceEmptys <- function(input_df){
 #' queryResults <- queryRefMet(mets = "2'-Deoxyuridine")
 #' }
 #' 
-
 queryRefMet <- function(mets){
   res <- httr::RETRY("POST", "https://www.metabolomicsworkbench.org/databases/refmet/name_to_refmet_new_min.php",
                      body = list(metabolite_name =mets),
@@ -73,7 +72,35 @@ queryRefMet <- function(mets){
   return(df1)
 }
 
-
+##' @param input_df a dataframe with metabolite names, ids (HMDB, CID), information
+##' @param HMDB_col name of column containing HMDB IDs
+##' @param CID_col name of column containing PubChem IDs
+##' @param KEGG_col name of column containing KEGG IDs
+##' @param LM_col name of column containing LipidMaps IDs
+##' @param CHEBI_col
+##' @param metab_col 
+##' @return one id per metabolite based on preferred ID types
+##' @author Andrew Patt
+extract_identifiers <- function(input_df, HMDB_col, CID_col, KEGG_col, LM_col,CHEBI_col,
+                                metab_col){
+  apply(input_df, 1, function(x){ #iterate over rows
+    if(all(!is.na(HMDB_col) & !is.na(input_df[HMDB_col]))){
+      return(input_df[HMDB_col]) #returns value based on available ID
+    }else if(!is.na(KEGG_col)){
+      return(input_df[KEGG_col])
+    }else if(!is.na(LM_col)){
+      return(input_df[LM_col])
+    }else if(!is.na(CHEBI_col)){
+      return(input_df[CHEBI_col])
+    }else if(!is.na(CID_col)){
+      return(input_df[CID_col])
+    }else if(!is.na(input_df[metab_col])){
+      return(input_df[metab_col])
+    }else{
+      return(NA)
+    }    
+  })
+}
 
 ############################################################################
 ## Main function                                                          ##
@@ -96,19 +123,10 @@ queryRefMet <- function(mets){
 #' }
 #' @export
 
-mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
-                                   metab_col, CID_col){
+mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA, LM_col=NA,CHEBI_col,
+                                   metab_col){
 
  RaMP::setConnectionToRaMP(is_sqlite=T)
-
-  ## if(!exists("pkg.globals")){
-  ##   stop("Please install and connect to RaMP")
-  ## }
-
-  ## if (file.exists(paste0(filename, ".rds"))){
-  ##   filteredMetMappings <- readRDS(paste0(filename, ".rds"))
-  ##   return(filteredMetMappings)
-  ## }
 
   ## Replace empty cells with NA
   #' @importFrom magrittr %>%
@@ -118,17 +136,8 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
   output_df <- stats::setNames(data.frame(matrix(nrow = nrow(input_df), ncol = 4)),
                                c(paste0("file_", filename), "input", "inputtype", "refmet_name"))
 
-  id_vector <- apply(input_df, 1, function(x){ #iterate over rows
-    if(all(!is.na(HMDB_col) & !is.na(x[HMDB_col]))){
-        return(x[HMDB_col]) #returns value based on available ID
-    }else if(!is.na(x[metab_col])){
-      return(x[metab_col])
-    }else if(!is.na(CID_col)){
-      return(x[CID_col])
-    }else{
-      return(NA)
-    } 
-  })
+  id_vector <- extract_identifiers(input_df=input_df, HMDB_col=HMDB_col, CID_col=CID_col, KEGG_col=KEGG_col, LM_col,CHEBI_col,
+                                metab_col)
 
   id_vector <- paste0(id_vector,collapse = "\n")
   refMetMappings <- queryRefMet(id_vector)
@@ -472,6 +481,7 @@ mapMetabolitesToRefMet <- function(input_df, filename, HMDB_col,
   ##########################################################################
   ## ## Follow up refMet query for missed metabolites                     ##
   ##########################################################################
+  browser()
   for (grp in 1:length(synNamefromId)){
     inspectSynList <- unlist(synNamefromId[grp])
     if(length(inspectSynList) > 100){
