@@ -36,6 +36,20 @@ parse_names <- function(ids){
   return(list_names)
 }
 
+append_standard_names <- function(mapped_input_list, list_input_files){
+  out <- mapply(function(x, y) {
+    y <- y %>%
+      dplyr::mutate("rownum" = 1:nrow(y))
+    x <- x %>%
+      dplyr::select(c(`Standardized name`,`rownum`))
+    out <- y %>%
+      dplyr::left_join(x,by="rownum") %>%
+      dplyr::select(-`rownum`)
+    return(out)
+  }, x = mapped_input_list, y = list_input_files, SIMPLIFY = FALSE)
+  return(out)
+}
+
 ##' @param mapped_input_list 
 ##' @param myinputfiles 
 ##' @return 
@@ -74,4 +88,6 @@ merge_files <- function(mapped_input_list,myinputfiles){
   return(merged_df)
 }
 
-
+write_outputs <- function(){
+  
+}

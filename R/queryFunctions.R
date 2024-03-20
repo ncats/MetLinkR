@@ -17,11 +17,16 @@
 queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
                         LM_col = NA, CHEBI_col = NA,
                         metab_col,synonym_search=FALSE) {
+  if(length(input_df)==1){
+    return(NA)
+  }
   input_df <- input_df %>% replaceEmptys()
-  id_vector <- extract_identifiers(
+  id_df <- extract_identifiers(
     input_df = input_df, HMDB_col = HMDB_col, CID_col = CID_col,
     KEGG_col = KEGG_col, LM_col, CHEBI_col, metab_col
   )
+  colnames(id_df) <- c("rownum","ID","priority")
+  id_vector <- id_df$ID
   if(synonym_search){
     id_vector = unique(id_vector)
   }
@@ -47,6 +52,8 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
   df1 <- df[rowSums(is.na(df)) != ncol(df), ]
   colnames(df1) <- df1[1, ]
   df1 <- df1[-c(1), ]
+  df1 <- df1 %>%
+    dplyr::left_join(id_df, by = c("Input name" = "ID"))
   return(df1)
 }
 
@@ -79,6 +86,9 @@ queryRampSynonyms <- function(ids){
   }else{
     ## Mass check
     checkValid_ids <- massCheck(resRampId)
+    if("rampId" %in% rownames(checkValid_ids)){
+      checkValid_ids <- t(checkValid_ids) %>% as.data.frame
+    }
 
     resRampIdStr <- sapply(resRampId,shQuote)
     resRampIdStr <- paste(resRampIdStr,collapse = ",")
@@ -98,16 +108,20 @@ queryRampSynonyms <- function(ids){
   }
 
   ## Have to re-map original inputs to Synonyms
-  input_vector <- c()
-  for(i in 1:nrow(dbID_synonyms)){
-    if(grepl(dbID_synonyms$sourceId[i],list_ids)){
-      input_vector <- c(input_vector,dbID_synonyms$sourceId[i])
-    }else{
-      input_vector <- c(input_vector,dbID_synonyms$commonName[i])
-    }
+  if(length(nrow(dbID_synonyms))!=0){
+    input_vector <- c()
+    for(i in 1:nrow(dbID_synonyms)){
+      if(grepl(dbID_synonyms$sourceId[i],list_ids)){
+        input_vector <- c(input_vector,dbID_synonyms$sourceId[i])
+      }else{
+        input_vector <- c(input_vector,dbID_synonyms$commonName[i])
+      }
   }
-  dbID_synonyms <- dbID_synonyms %>%
-    dplyr::mutate(Input = input_vector) %>%
-    dplyr::select(`Synonym`,`classFlag`,`Input`)
-  return(dbID_synonyms)
+    dbID_synonyms <- dbID_synonyms %>%
+      dplyr::mutate(Input = input_vector) %>%
+      dplyr::select(`Synonym`,`classFlag`,`Input`)
+    return(dbID_synonyms)
+  }else{
+    return(NA)
+  }
 }

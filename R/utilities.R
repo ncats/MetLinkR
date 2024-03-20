@@ -35,6 +35,8 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
                                 ramp_prefixes = FALSE) {
   id_vector <- c()
   temp_vector <- c()
+  id_df <- as.data.frame(matrix(nrow=0,ncol=3))
+  colnames(id_df) <- c("rownum", "ID", "priority")
 
   for (x in 1:nrow(input_df)) {
     if (ramp_prefixes) {
@@ -66,6 +68,9 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
           temp_vector <- c(temp_vector, paste0("chebi:", input_df[x, CHEBI_col]))
         }
       }
+      if (!is.na(metab_col)) {
+        temp_vector <- c(temp_vector, input_df[x, metab_col])
+      }
       if (!is.na(CID_col)) {
         if(is.na(input_df[x, CID_col])){
           temp_vector <- c(temp_vector,NA)
@@ -86,30 +91,38 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
       if (!is.na(CHEBI_col)) {
         temp_vector <- c(temp_vector, input_df[x, CHEBI_col])
       }
+      if (!is.na(metab_col)) {
+        temp_vector <- c(temp_vector, input_df[x, metab_col])
+      }
       if (!is.na(CID_col)) {
         temp_vector <- c(temp_vector, input_df[x, CID_col])
       }
     }
 
-    ## Common names don't need prefixes
-    if (!is.na(metab_col)) {
-      temp_vector <- c(temp_vector, input_df[x, metab_col])
-    }
-
     ## Pick the highest priority ID or return NA
-    if (length(temp_vector) == 0 | all(is.na(temp_vector))) {
-      id_vector <- c(id_vector, NA)
-    } else {
-      ## Use first ID if multiple IDs per cell are specified
-      if (grepl(";", na.omit(temp_vector)[1])) {
-        id_vector <- c(id_vector, strsplit(na.omit(temp_vector)[1], ";")[[1]][1])
+    if(ramp_prefixes){
+      if (length(temp_vector) == 0 | all(is.na(temp_vector))) {
+        id_vector <- c(id_vector, NA)
       } else {
-        id_vector <- c(id_vector, na.omit(temp_vector)[1])
+        ## Use first ID if multiple IDs per cell are specified
+        if (grepl(";", na.omit(temp_vector)[1])) {
+          id_vector <- c(id_vector, strsplit(na.omit(temp_vector)[1], ";")[[1]][1])
+        } else {
+          id_vector <- c(id_vector, na.omit(temp_vector)[1])
+        }
       }
+    }else{
+      if(any(grepl(";",temp_vector))){
+        temp_vector <- unlist(strsplit(temp_vector,";"))
+      }
+      temp_df <- data.frame(x, temp_vector,1:length(temp_vector))
+      id_df <- rbind(id_df,
+                     temp_df)
+      
     }
     temp_vector <- c()
   }
-  return(id_vector)
+  return(ifelse(ramp_prefixes,return(id_vector),return(id_df)))
 }
 
 ##' @param rampId_DF RaMP IDs for mass check
@@ -180,4 +193,8 @@ substrRight <- function(x, n){
 
 substrLeft <- function(x, n){
   substr(x, 1, n)
+}
+
+strip_prefixes <- function(id){
+  return(gsub("hmdb:|kegg:|LIPIDMAPS:|pubchem:|CAS:","",id))
 }

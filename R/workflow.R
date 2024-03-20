@@ -47,21 +47,38 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
     mapped_list_input_files,
     function(x) {
       return(x %>%
-        mutate("Origin" = "Raw input") %>%
-        mutate("classFlag" = "Species") %>%
-        dplyr::filter(`Standardized name` != "-"))
+               mutate("Origin" = "Raw input") %>%
+               mutate("classFlag" = "RefMet") %>%
+               dplyr::filter(`Standardized name` != "-") %>%
+               dplyr::group_by(rownum) %>%
+               dplyr::filter(priority == min(priority)) %>%
+               ## dplyr::ungroup %>%
+               as.data.frame %>%
+               dplyr::select(-c(priority)))
     }
   )
-  print("(2/5) Performed initial RefMet mapping")
 
+  print("(2/5) Performed initial RefMet mapping")
   ################################################################################
   ## 3. Assemble synonyms table from RaMP-DB for missed IDs, perform mass check ##
   ################################################################################
-  refmet_unmapped_ids <- list()
-  for (i in 1:length(list_input_files)) {
-    refmet_unmapped_ids[[i]] <-
-      list_input_files[[i]][which(mapped_list_input_files[[i]]$`Standardized name` == "-"), ]
-  }
+  mapped_rownums <- mapply(function(x,y) {
+    return(x %>%
+             dplyr::filter(rownum %in% y$rownum) %>%
+             dplyr::pull(rownum) %>%
+             unique
+           )    
+  }, x = mapped_list_input_files, y =refmet_mapped_ids)
+  
+  ## refmet_unmapped_ids <- list()
+  ## for (i in 1:length(list_input_files)) {
+  ##   refmet_unmapped_ids[[i]] <-
+  ##     list_input_files[[i]][which(mapped_list_input_files[[i]]$`Standardized name` == "-"), ]
+  ## }
+  refmet_unmapped_ids <- mapply(function(x,y){
+    return(x[-y,])
+  }, x = list_input_files, y = mapped_rownums, SIMPLIFY = FALSE)
+
   missed_ids <- mcmapply(function(x, y) {
     extract_identifiers(
       input_df = replaceEmptys(x),
@@ -72,12 +89,13 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
     )
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
-  db <<- RaMP()
+  db <<- RaMP::RaMP()
   synonym_table_list <- mclapply(missed_ids, queryRampSynonyms)
   print("(3/5) Found RaMP synonyms for unmapped inputs")
   ##########################################################################
   ## 4. Re-Query RefMet with synonym table                                ##
   ##########################################################################
+  
   mapped_list_synonyms <- mcmapply(function(x, y) {
     queryRefMet(
       input_df = x,
@@ -91,21 +109,54 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
 
   refmet_mapped_synonyms <- list()
   for (i in 1:length(mapped_list_synonyms)) {
-    refmet_mapped_synonyms[[i]] <- mapped_list_synonyms[[i]] %>%
-      dplyr::filter(`Standardized name` != "-") %>%
-      dplyr::left_join(synonym_table_list[[i]], c("Input name" = "Synonym")) %>%
-      dplyr::select(-`Input name`) %>%
-      dplyr::rename("Input name" = "Input") %>%
-      dplyr::distinct() %>%
-      mutate("Origin" = "Synonym")
+    if(length(mapped_list_synonyms[[i]])==1){
+      refmet_mapped_synonyms[[i]] <- NA
+    }else{
+      refmet_mapped_synonyms[[i]] <- mapped_list_synonyms[[i]] %>%
+        dplyr::filter(`Standardized name` != "-") %>%
+        dplyr::left_join(synonym_table_list[[i]], c("Input name" = "Synonym")) %>%
+        dplyr::select(-`Input name`) %>%
+        dplyr::rename("Input name" = "Input") %>%
+        dplyr::distinct() %>%
+        mutate("Origin" = "Synonym")
+    }
   }
-  print("(4/5) Queried RaMP synonyms in RefMet")
 
+  ## Fix rownums
+  refmet_mapped_synonyms <- mcmapply(function(x,y){
+    if(is.logical(y)){
+      return(NA)
+    }else{
+      y = y %>% dplyr::filter(!is.na(`Input name`))
+      rownums <- c()
+      for(i in 1:nrow(y)){
+        matches <- which(
+          apply(x, 1,
+                function(a) {
+                  strip_prefixes(y[i, "Input name"]) %in% a}))
+        if(length(matches)!=0){
+          rownums <- c(rownums,
+                       matches)
+        }else{
+          rownums <- c(rownums, NA)
+        }
+      }
+      print(y)
+      print(rownums)
+      return(y %>%
+               dplyr::mutate(rownum = rownums))
+    }
+    },x = list_input_files, y = refmet_mapped_synonyms)
+  print("(4/5) Queried RaMP synonyms in RefMet")
+  
   mapped_input_list <- mcmapply(function(x, y) {
-    rbind(
-      x,
-      y[, colnames(x)]
-    )
+    if(length(y)==1){
+      x
+    }else{
+      rbind(
+        x,
+        y[, colnames(x)]
+      )}
   }, x = refmet_mapped_ids, y = refmet_mapped_synonyms, SIMPLIFY = FALSE)
 
   ##########################################################################
@@ -115,10 +166,11 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
     calculate_mapping_rates(mapped_input_list, list_input_files, myinputfiles)
 
   ##########################################################################
-  ## 5. Merge mapped files and write to csv                               ##
+  ## 5. Append output to inputs. Merge mapped files and write to csv      ##
   ##########################################################################
+  appended_inputs <- append_standard_names(mapped_input_list, list_input_files) 
   mapping_library <- merge_files(mapped_input_list,myinputfiles)
-  
+  browser()
   if (writecsv) {
     utils::write.csv(mapping_library, file = paste0(outputFileName, ".csv"),
                      row.names=FALSE,na="-")
