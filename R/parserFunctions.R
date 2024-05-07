@@ -2,7 +2,7 @@
 #' @return a list of input files
 readInputCSVs <- function(inputcsv){
   myinputfiles <- utils::read.csv(inputcsv, header=T)
-  
+
   list_input_files <- list()
   for (i in 1:nrow(myinputfiles)) {
     temp <- utils::read.csv(myinputfiles$FileNames[i], header=T)
@@ -12,8 +12,8 @@ readInputCSVs <- function(inputcsv){
   return(list_input_files)
 }
 
-##' @param ids 
-##' @return 
+##' @param ids
+##' @return Parsed names
 ##' @author Patt
 parse_names <- function(ids){
   ## Remove saturation levels and MS1 ID status from Metabolon-style names
@@ -27,10 +27,10 @@ parse_names <- function(ids){
     }
     return(x)
   })
-  
+
   ## Remove unnamed Metabolon metabolites to speed up query
   list_names <- list_names[!grepl("X - ",substrLeft(list_names,4))]
-  
+
   list_names <- sapply(list_names,shQuote)
   list_names <- paste(list_names,collapse = ",")
   return(list_names)
@@ -50,15 +50,15 @@ append_standard_names <- function(mapped_input_list, list_input_files){
   return(out)
 }
 
-##' @param mapped_input_list 
-##' @param myinputfiles 
-##' @return 
+##' @param mapped_input_list
+##' @param myinputfiles
+##' @return Merged files
 ##' @author Patt
 merge_files <- function(mapped_input_list,myinputfiles){
   prefixes <- RaMP::getPrefixesFromAnalytes(db,"metabolite")$idTypes
   prefixes <- strsplit(prefixes, ", ")[[1]]
   prefixes <- paste(prefixes, collapse = ":|")
-  
+
   standard_name_list <-
     sapply(mapped_input_list,
            function(x){return(x$`Standardized name`)}) %>%
@@ -89,5 +89,5 @@ merge_files <- function(mapped_input_list,myinputfiles){
 }
 
 write_outputs <- function(){
-  
+
 }

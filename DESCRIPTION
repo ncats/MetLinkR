@@ -6,13 +6,14 @@ Authors@R:
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 Imports:
-  magrittr,
-  dplyr,
-  stringr,
-  httr,
-  RaMP,
-  parallel,
-  crayon
+    magrittr,
+    dplyr,
+    stringr,
+    httr,
+    RaMP,
+    parallel,
+    crayon,
+    rlang
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

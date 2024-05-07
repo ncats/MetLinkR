@@ -26,4 +26,5 @@ finalHarmonized <- runHarmonization(
   outputFileName = "exampleharmonizedfile"
 )
 }
+
 }
