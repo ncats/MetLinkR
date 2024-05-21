@@ -13,16 +13,17 @@ readInputCSVs <- function(inputcsv){
 }
 
 ##' @param ids 
+##' @param RaMP_prefixes 
 ##' @return 
 ##' @author Patt
-parse_names <- function(ids){
+parse_names <- function(ids, RaMP_prefixes){
   ## Remove saturation levels and MS1 ID status from Metabolon-style names
-  list_names <- ids[!grepl(":",ids)]
+  list_names <- ids[!grepl(paste0(RaMP_prefixes, collapse = "|"),ids)]
   list_names <- sapply(list_names, function(x){
     if(grepl("\\*",substrRight(x,1))){
       x <- substrLeft(x,nchar(x)-1)
     }
-    if(grepl("(*)",substrRight(x,3))){
+    if(grepl("(\\*)",substrRight(x,3))){
       x <- substrLeft(x, nchar(x)-3)
     }
     return(x)

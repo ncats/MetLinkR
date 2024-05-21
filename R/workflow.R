@@ -141,8 +141,6 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
           rownums <- c(rownums, NA)
         }
       }
-      print(y)
-      print(rownums)
       return(y %>%
                dplyr::mutate(rownum = rownums))
     }
@@ -170,7 +168,6 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
   ##########################################################################
   appended_inputs <- append_standard_names(mapped_input_list, list_input_files) 
   mapping_library <- merge_files(mapped_input_list,myinputfiles)
-  browser()
   if (writecsv) {
     utils::write.csv(mapping_library, file = paste0(outputFileName, ".csv"),
                      row.names=FALSE,na="-")

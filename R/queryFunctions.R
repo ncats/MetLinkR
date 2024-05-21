@@ -65,12 +65,16 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
 ##' @author Andrew Patt
 queryRampSynonyms <- function(ids){
   ## Start with DB IDs
-  list_ids <- ids[grepl(":",ids)]
+  RaMP_prefixes <-
+    RaMP::getPrefixesFromAnalytes(db = db, analyteType="metabolite")[[2]]
+  RaMP_prefixes <- strsplit(RaMP_prefixes,", ")[[1]]
+  
+  list_ids <- ids[grepl(paste0(RaMP_prefixes, collapse = "|"),ids)]
   
   list_ids <- sapply(list_ids,shQuote)
   list_ids <- paste(list_ids,collapse = ",")
 
-  list_names <- parse_names(ids)
+  list_names <- parse_names(ids, RaMP_prefixes)
   
   queryId <- paste0(
     "SELECT DISTINCT source.rampId,source.sourceId,source.commonName,
