@@ -8,11 +8,14 @@ Description: What the package does (one paragraph).
 Imports:
   magrittr,
   dplyr,
+  tidyr,
   stringr,
   httr,
   RaMP,
   parallel,
-  crayon
+  crayon,
+  xlsx,
+  ggplot2
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

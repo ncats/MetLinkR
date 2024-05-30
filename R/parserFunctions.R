@@ -74,12 +74,13 @@ merge_files <- function(mapped_input_list,myinputfiles){
     })
     merged_df <- merged_df %>%
       dplyr::left_join(mapped_input_list[[i]] %>%
-                         dplyr::select(`Input name`, `Standardized name`, Origin,
-                                       classFlag),
+                         dplyr::select(`Input name`, `Standardized name`, Origin ##,
+                                       ##classFlag
+                                       ),
                        by = c("Harmonized name" = "Standardized name")) %>%
       dplyr::rename(!!paste0("Input name (",myinputfiles$ShortFileName[i],")"):="Input name") %>%
-      dplyr::rename(!!paste0("Origin (",myinputfiles$ShortFileName[i],")"):="Origin") %>%
-      dplyr::rename(!!paste0("Class flag (",myinputfiles$ShortFileName[i],")"):="classFlag")
+      dplyr::rename(!!paste0("Origin (",myinputfiles$ShortFileName[i],")"):="Origin") ## %>%
+      ## dplyr::rename(!!paste0("Class flag (",myinputfiles$ShortFileName[i],")"):="classFlag")
   }
   merged_df <- merged_df %>%
     dplyr::group_by(`Harmonized name`) %>%

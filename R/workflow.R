@@ -14,7 +14,9 @@
 #' }
 #' @export
 
-harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
+harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
+                                 long_mapping_library = TRUE) {
+  start_time <- Sys.time()
   ##########################################################################
   ## 1. Read in input files. Output a list of dataframes                  ##
   ##########################################################################
@@ -37,7 +39,10 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
       filename = y$ShortFileName,
       HMDB_col = y$HMDB,
       metab_col = y$Metabolite_Name,
-      CID_col = y$PubChem_CID
+      CID_col = y$PubChem_CID,
+      KEGG_col =y$KEGG,
+      LM_col = y$LIPIDMAPS,
+      CHEBI_col = y$chebi
     )
   }, x = list_input_files,
   y = myinputfiles_list,
@@ -48,7 +53,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
     function(x) {
       return(x %>%
                mutate("Origin" = "Raw input") %>%
-               mutate("classFlag" = "RefMet") %>%
+               ## mutate("classFlag" = "RefMet") %>%
                dplyr::filter(`Standardized name` != "-") %>%
                dplyr::group_by(rownum) %>%
                dplyr::filter(priority == min(priority)) %>%
@@ -80,13 +85,17 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
   }, x = list_input_files, y = mapped_rownums, SIMPLIFY = FALSE)
 
   missed_ids <- mcmapply(function(x, y) {
-    extract_identifiers(
-      input_df = replaceEmptys(x),
-      HMDB_col = y$HMDB,
-      metab_col = y$Metabolite_Name,
-      CID_col = y$PubChem_CID,
-      ramp_prefixes = TRUE
-    )
+    if(nrow(x)==0){
+      return(NA)
+    }else{
+      return(extract_identifiers(
+        input_df = replaceEmptys(x),
+        HMDB_col = y$HMDB,
+        metab_col = y$Metabolite_Name,
+        CID_col = y$PubChem_CID,
+        ramp_prefixes = TRUE
+      ))
+    }
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
   db <<- RaMP::RaMP()
@@ -166,13 +175,47 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv) {
   ##########################################################################
   ## 5. Append output to inputs. Merge mapped files and write to csv      ##
   ##########################################################################
-  appended_inputs <- append_standard_names(mapped_input_list, list_input_files) 
-  mapping_library <- merge_files(mapped_input_list,myinputfiles)
-  if (writecsv) {
-    utils::write.csv(mapping_library, file = paste0(outputFileName, ".csv"),
-                     row.names=FALSE,na="-")
-  }
+  dir.create("metLinkR_output", showWarnings = FALSE)
+  appended_inputs <- append_standard_names(mapped_input_list, list_input_files)
   
-  print(paste0("(5/5) Wrote output file: ", outputFileName,".csv"))
+  silent <- mapply(function(x,y){
+    write.csv(x,
+              file = paste0("metLinkR_output/",gsub(".csv","",y),"_metLinkR.csv"),
+              row.names = FALSE)
+  },x = appended_inputs, y = myinputfiles$FileNames)
+
+  
+  mapping_library <- merge_files(mapped_input_list,myinputfiles)
+  multimappings <- find_multimapped_metabolites(mapping_library,myinputfiles)
+  
+  if(long_mapping_library){
+    mapping_library <- pivot_mapping_library(mapping_library)
+  }
+
+  xlsx::write.xlsx(as.data.frame(mapping_library),
+                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
+                   row.names=FALSE,sheetName="Mapping Library")
+  
+  ## Write unmapped values to second sheet
+  missed_mappings <- extract_missing_values(appended_inputs,myinputfiles)
+  missed_mappings <- dplyr::bind_rows(as.vector(missed_mappings), .id = "Data File")
+  xlsx::write.xlsx(missed_mappings,
+                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
+                   row.names=FALSE,sheetName="Missed Metabolites",
+                   append = TRUE,showNA=FALSE)
+
+  ## Write multi-mapped metabolites to third sheet
+  xlsx::write.xlsx(multimappings,
+                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
+                   row.names=FALSE,sheetName="MultiMapped Metabolites",
+                   append = TRUE,showNA=FALSE)
+  ## Write text log
+  write_txt_log(start_time,myinputfiles)
+
+  browser()
+  ## Write PDF report
+  write_pdf_report(mapping_rates)
+  
+  print("(5/5) Wrote output files to metLinkR_output/")
   return(mapping_library)
 }
