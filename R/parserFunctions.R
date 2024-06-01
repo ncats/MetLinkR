@@ -12,7 +12,7 @@ readInputCSVs <- function(inputcsv){
   return(list_input_files)
 }
 
-##' @param ids
+##' @param ids A vector of metabolite ids
 ##' @return Parsed names
 ##' @author Patt
 parse_names <- function(ids){
@@ -50,11 +50,11 @@ append_standard_names <- function(mapped_input_list, list_input_files){
   return(out)
 }
 
-##' @param mapped_input_list
-##' @param myinputfiles
+##' @param mapped_input_list Mapped input list
+##' @param myinputfiles Input files
 ##' @return Merged files
 ##' @author Patt
-merge_files <- function(mapped_input_list,myinputfiles){
+merge_files <- function(mapped_input_list, myinputfiles){
   prefixes <- RaMP::getPrefixesFromAnalytes(db,"metabolite")$idTypes
   prefixes <- strsplit(prefixes, ", ")[[1]]
   prefixes <- paste(prefixes, collapse = ":|")
