@@ -4,7 +4,12 @@
 \alias{harmonizeInputSheets}
 \title{Run total harmonization of metabolites}
 \usage{
-harmonizeInputSheets(inputcsv, outputFileName, writecsv)
+harmonizeInputSheets(
+  inputcsv,
+  outputFileName,
+  writecsv,
+  long_mapping_library = TRUE
+)
 }
 \arguments{
 \item{inputcsv}{character of pathway to csv containing names of files with metabolite names}
@@ -12,6 +17,8 @@ harmonizeInputSheets(inputcsv, outputFileName, writecsv)
 \item{outputFileName}{character of output file}
 
 \item{writecsv}{boolean for whether or not to write a csv file of the dataframe with harmonized files}
+
+\item{long_mapping_library}{boolean for whether or not to pivot the mapping library}
 }
 \value{
 a dataframe containing harmonized files across all input files listed in inputcsv

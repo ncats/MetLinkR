@@ -65,13 +65,16 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
 ##' with class/species flags
 ##' @author Andrew Patt
 queryRampSynonyms <- function(ids){
-  ## Start with DB IDs
-  list_ids <- ids[grepl(":",ids)]
+  RaMP_prefixes <-
+    RaMP::getPrefixesFromAnalytes(db = db, analyteType="metabolite")[[2]]
+  RaMP_prefixes <- strsplit(RaMP_prefixes,", ")[[1]]
+
+  list_ids <- ids[grepl(paste0(RaMP_prefixes, collapse = "|"),ids)]
 
   list_ids <- sapply(list_ids,shQuote)
   list_ids <- paste(list_ids,collapse = ",")
 
-  list_names <- parse_names(ids)
+  list_names <- parse_names(ids, RaMP_prefixes)
 
   queryId <- paste0(
     "SELECT DISTINCT source.rampId,source.sourceId,source.commonName,
@@ -86,10 +89,10 @@ queryRampSynonyms <- function(ids){
     dbID_synonyms = NA
   }else{
     ## Mass check
-    checkValid_ids <- massCheck(resRampId)
-    if("rampId" %in% rownames(checkValid_ids)){
-      checkValid_ids <- t(checkValid_ids) %>% as.data.frame
-    }
+    ## checkValid_ids <- massCheck(resRampId)
+    ## if("rampId" %in% rownames(checkValid_ids)){
+    ##   checkValid_ids <- t(checkValid_ids) %>% as.data.frame
+    ## }
 
     resRampIdStr <- sapply(resRampId,shQuote)
     resRampIdStr <- paste(resRampIdStr,collapse = ",")
@@ -98,14 +101,12 @@ queryRampSynonyms <- function(ids){
        analyteSynonym WHERE rampId in (",resRampIdStr, ")")
     dbID_synonyms <- RaMP::runQuery(querywRamp,db=db)
     dbID_synonyms <- dbID_synonyms %>%
-      dplyr::left_join(checkValid_ids, by ="rampId") %>%
-      dplyr::filter(classFlag != "Invalid") %>%
-      ## dplyr::mutate(classFlag =
-      ##                 ifelse(rampId %in% checkValid_ids$rampId,
-      ##                        "Class",
-      ##                        "Species")) %>%
+      ## dplyr::left_join(checkValid_ids, by ="rampId") %>%
+      ## dplyr::filter(classFlag != "Invalid") %>%
       dplyr::left_join(resRampId, by = "rampId") %>%
-      dplyr::select(`Synonym`,`classFlag`,`sourceId`,`commonName`)
+      dplyr::select(`Synonym`,
+                    ## `classFlag`,
+                    `sourceId`,`commonName`)
   }
 
   ## Have to re-map original inputs to Synonyms
@@ -120,7 +121,9 @@ queryRampSynonyms <- function(ids){
   }
     dbID_synonyms <- dbID_synonyms %>%
       dplyr::mutate(Input = input_vector) %>%
-      dplyr::select(`Synonym`,`classFlag`,`Input`)
+      dplyr::select(`Synonym`,
+                    ##`classFlag`,
+                    `Input`)
     return(dbID_synonyms)
   }else{
     return(NA)

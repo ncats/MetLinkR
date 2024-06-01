@@ -184,7 +184,7 @@ calculate_mapping_rates <- function(mapped_input_list, list_input_files,
     crayon::bold("Global mapping rate: ",
                  round(global_mapping_rate,3) * 100, "%\n"))
   cat(mapping_rate_out)
-  return(mapping_rates)
+  return(list(global_mapping_rate,mapping_rates))
 }
 
 substrRight <- function(x, n){
@@ -198,3 +198,5 @@ substrLeft <- function(x, n){
 strip_prefixes <- function(id){
   return(gsub("hmdb:|kegg:|LIPIDMAPS:|pubchem:|CAS:","",id))
 }
+
+

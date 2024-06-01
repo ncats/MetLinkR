@@ -12,17 +12,19 @@ readInputCSVs <- function(inputcsv){
   return(list_input_files)
 }
 
+
 ##' @param ids A vector of metabolite ids
-##' @return Parsed names
+##' @param RaMP_prefixes A vector of RaMP prefixes
+##' @return A vector of metabolite names
 ##' @author Patt
-parse_names <- function(ids){
+parse_names <- function(ids, RaMP_prefixes){
   ## Remove saturation levels and MS1 ID status from Metabolon-style names
-  list_names <- ids[!grepl(":",ids)]
+  list_names <- ids[!grepl(paste0(RaMP_prefixes, collapse = "|"),ids)]
   list_names <- sapply(list_names, function(x){
     if(grepl("\\*",substrRight(x,1))){
       x <- substrLeft(x,nchar(x)-1)
     }
-    if(grepl("(*)",substrRight(x,3))){
+    if(grepl("(\\*)",substrRight(x,3))){
       x <- substrLeft(x, nchar(x)-3)
     }
     return(x)
@@ -73,12 +75,13 @@ merge_files <- function(mapped_input_list, myinputfiles){
     })
     merged_df <- merged_df %>%
       dplyr::left_join(mapped_input_list[[i]] %>%
-                         dplyr::select(`Input name`, `Standardized name`, Origin,
-                                       classFlag),
+                         dplyr::select(`Input name`, `Standardized name`, Origin ##,
+                                       ##classFlag
+                                       ),
                        by = c("Harmonized name" = "Standardized name")) %>%
       dplyr::rename(!!paste0("Input name (",myinputfiles$ShortFileName[i],")"):="Input name") %>%
-      dplyr::rename(!!paste0("Origin (",myinputfiles$ShortFileName[i],")"):="Origin") %>%
-      dplyr::rename(!!paste0("Class flag (",myinputfiles$ShortFileName[i],")"):="classFlag")
+      dplyr::rename(!!paste0("Origin (",myinputfiles$ShortFileName[i],")"):="Origin") ## %>%
+      ## dplyr::rename(!!paste0("Class flag (",myinputfiles$ShortFileName[i],")"):="classFlag")
   }
   merged_df <- merged_df %>%
     dplyr::group_by(`Harmonized name`) %>%
