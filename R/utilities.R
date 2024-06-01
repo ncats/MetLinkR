@@ -105,10 +105,10 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
         id_vector <- c(id_vector, NA)
       } else {
         ## Use first ID if multiple IDs per cell are specified
-        if (grepl(";", na.omit(temp_vector)[1])) {
-          id_vector <- c(id_vector, strsplit(na.omit(temp_vector)[1], ";")[[1]][1])
+        if (grepl(";", stats::na.omit(temp_vector)[1])) {
+          id_vector <- c(id_vector, strsplit(stats::na.omit(temp_vector)[1], ";")[[1]][1])
         } else {
-          id_vector <- c(id_vector, na.omit(temp_vector)[1])
+          id_vector <- c(id_vector, stats::na.omit(temp_vector)[1])
         }
       }
     }else{

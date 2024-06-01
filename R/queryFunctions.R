@@ -1,13 +1,14 @@
 #' Query RefMet for standardized names. Code from Eoin Fahy, received on 5/8/2023
 #'
-#' @param input_df 
-#' @param filename 
-#' @param HMDB_col 
-#' @param CID_col 
-#' @param KEGG_col 
-#' @param LM_col 
-#' @param CHEBI_col 
-#' @param metab_col
+#' @param input_df dataframe of metabolites
+#' @param filename name of file
+#' @param HMDB_col HMDB column name
+#' @param CID_col CID column name
+#' @param KEGG_col KEGG column name
+#' @param LM_col LM column name
+#' @param CHEBI_col CHEBI column name
+#' @param metab_col metabolite column name
+#' @param synonym_search boolean for whether to search synonyms
 #' #' @return a dataframe of RefMet query results: input/standardized name, classes, molecular formula, mass
 #' @examples
 #' \dontrun{
@@ -39,7 +40,7 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
   x <- httr::content(res)
   y <- strsplit(x, "\n")
   df <- data.frame(ncol = 7)
-  
+
   for (i in 1:length(y[[1]])) {
     if (nchar(y[[1]][i]) > 1) {
       z <- strsplit(y[[1]][i], "\t")
@@ -48,7 +49,7 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
       }
     }
   }
-  
+
   df1 <- df[rowSums(is.na(df)) != ncol(df), ]
   colnames(df1) <- df1[1, ]
   df1 <- df1[-c(1), ]
@@ -66,21 +67,21 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
 queryRampSynonyms <- function(ids){
   ## Start with DB IDs
   list_ids <- ids[grepl(":",ids)]
-  
+
   list_ids <- sapply(list_ids,shQuote)
   list_ids <- paste(list_ids,collapse = ",")
 
   list_names <- parse_names(ids)
-  
+
   queryId <- paste0(
     "SELECT DISTINCT source.rampId,source.sourceId,source.commonName,
-     chem_props.mol_formula, chem_props.mw 
-     FROM source 
+     chem_props.mol_formula, chem_props.mw
+     FROM source
      LEFT JOIN chem_props ON source.rampId = chem_props.ramp_id
      WHERE source.sourceId in (",list_ids,")
      OR source.commonName in (",list_names,");")
   resRampId <- RaMP::runQuery(queryId,db=db)
-  
+
   if(nrow(resRampId)==0){
     dbID_synonyms = NA
   }else{
@@ -93,7 +94,7 @@ queryRampSynonyms <- function(ids){
     resRampIdStr <- sapply(resRampId,shQuote)
     resRampIdStr <- paste(resRampIdStr,collapse = ",")
     querywRamp <- paste0(
-      "SELECT DISTINCT rampId, Synonym FROM 
+      "SELECT DISTINCT rampId, Synonym FROM
        analyteSynonym WHERE rampId in (",resRampIdStr, ")")
     dbID_synonyms <- RaMP::runQuery(querywRamp,db=db)
     dbID_synonyms <- dbID_synonyms %>%
