@@ -8,7 +8,6 @@ Description: What the package does (one paragraph).
 Imports:
     magrittr,
     dplyr,
-    stringr,
     httr,
     RaMP,
     parallel,
