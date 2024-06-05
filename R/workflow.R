@@ -3,6 +3,7 @@
 #' @param inputcsv character of pathway to csv containing names of files with metabolite names
 #' @param outputFileName character of output file
 #' @param writecsv boolean for whether or not to write a csv file of the dataframe with harmonized files
+#' @param long_mapping_library boolean for whether or not to pivot the mapping library
 #'
 #' @return a dataframe containing harmonized files across all input files listed in inputcsv
 #' @examples
@@ -12,6 +13,9 @@
 #'   outputFileName = "exampleharmonizedfile"
 #' )
 #' }
+#'
+#' @importFrom rlang .data
+#'
 #' @export
 
 harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
@@ -23,17 +27,17 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   myinputfiles <- utils::read.csv(inputcsv, header = T)
   list_input_files <- readInputCSVs(inputcsv)
   myinputfiles_list <- as.list(data.frame(t(myinputfiles)))
-  myinputfiles_list <- mclapply(myinputfiles_list,function(x){
+  myinputfiles_list <- parallel::mclapply(myinputfiles_list, function(x) {
     out <- t(data.frame(x))
     colnames(out) <- colnames(myinputfiles)
     return(as.data.frame(out))
   })
-  print("(1/5) Imported files")
+  message("(1/5) Imported files")
 
   ##########################################################################
   ## 2. Initial RefMet mappings                                           ##
   ##########################################################################
-  mapped_list_input_files <- mcmapply(function(x, y) {
+  mapped_list_input_files <- parallel::mcmapply(function(x, y) {
     queryRefMet(
       input_df = x,
       filename = y$ShortFileName,
@@ -48,7 +52,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   y = myinputfiles_list,
   SIMPLIFY = FALSE)
 
-  refmet_mapped_ids <- mclapply(
+  refmet_mapped_ids <- parallel::mclapply(
     mapped_list_input_files,
     function(x) {
       return(x %>%
@@ -58,23 +62,23 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
                dplyr::group_by(rownum) %>%
                dplyr::filter(priority == min(priority)) %>%
                ## dplyr::ungroup %>%
-               as.data.frame %>%
-               dplyr::select(-c(priority)))
+               as.data.frame() %>%
+               dplyr::select(-c(.data$priority)))
     }
   )
 
-  print("(2/5) Performed initial RefMet mapping")
+  message("(2/5) Performed initial RefMet mapping")
   ################################################################################
   ## 3. Assemble synonyms table from RaMP-DB for missed IDs, perform mass check ##
   ################################################################################
   mapped_rownums <- mapply(function(x,y) {
     return(x %>%
-             dplyr::filter(rownum %in% y$rownum) %>%
-             dplyr::pull(rownum) %>%
+             dplyr::filter(.data$rownum %in% y$rownum) %>%
+             dplyr::pull(.data$rownum) %>%
              unique
-           )    
-  }, x = mapped_list_input_files, y =refmet_mapped_ids)
-  
+           )
+  }, x = mapped_list_input_files, y = refmet_mapped_ids)
+
   ## refmet_unmapped_ids <- list()
   ## for (i in 1:length(list_input_files)) {
   ##   refmet_unmapped_ids[[i]] <-
@@ -84,7 +88,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     return(x[-y,])
   }, x = list_input_files, y = mapped_rownums, SIMPLIFY = FALSE)
 
-  missed_ids <- mcmapply(function(x, y) {
+  missed_ids <- parallel::mcmapply(function(x, y) {
     if(nrow(x)==0){
       return(NA)
     }else{
@@ -99,13 +103,13 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
   db <<- RaMP::RaMP()
-  synonym_table_list <- mclapply(missed_ids, queryRampSynonyms)
-  print("(3/5) Found RaMP synonyms for unmapped inputs")
+  synonym_table_list <- parallel::mclapply(missed_ids, queryRampSynonyms)
+  message("(3/5) Found RaMP synonyms for unmapped inputs")
   ##########################################################################
   ## 4. Re-Query RefMet with synonym table                                ##
   ##########################################################################
-  
-  mapped_list_synonyms <- mcmapply(function(x, y) {
+
+  mapped_list_synonyms <- parallel::mcmapply(function(x, y) {
     queryRefMet(
       input_df = x,
       filename = paste0("synonym_table_", y$ShortFileName),
@@ -122,21 +126,21 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
       refmet_mapped_synonyms[[i]] <- NA
     }else{
       refmet_mapped_synonyms[[i]] <- mapped_list_synonyms[[i]] %>%
-        dplyr::filter(`Standardized name` != "-") %>%
+        dplyr::filter(.data$`Standardized name` != "-") %>%
         dplyr::left_join(synonym_table_list[[i]], c("Input name" = "Synonym")) %>%
-        dplyr::select(-`Input name`) %>%
+        dplyr::select(-.data$`Input name`) %>%
         dplyr::rename("Input name" = "Input") %>%
         dplyr::distinct() %>%
-        mutate("Origin" = "Synonym")
+        dplyr::mutate("Origin" = "Synonym")
     }
   }
 
   ## Fix rownums
-  refmet_mapped_synonyms <- mcmapply(function(x,y){
+  refmet_mapped_synonyms <- parallel::mcmapply(function(x,y){
     if(is.logical(y)){
       return(NA)
     }else{
-      y = y %>% dplyr::filter(!is.na(`Input name`))
+      y = y %>% dplyr::filter(!is.na(.data$`Input name`))
       rownums <- c()
       for(i in 1:nrow(y)){
         matches <- which(
@@ -154,9 +158,9 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
                dplyr::mutate(rownum = rownums))
     }
     },x = list_input_files, y = refmet_mapped_synonyms)
-  print("(4/5) Queried RaMP synonyms in RefMet")
-  
-  mapped_input_list <- mcmapply(function(x, y) {
+  message("(4/5) Queried RaMP synonyms in RefMet")
+
+  mapped_input_list <- parallel::mcmapply(function(x, y) {
     if(length(y)==1){
       x
     }else{
@@ -177,17 +181,17 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   ##########################################################################
   dir.create("metLinkR_output", showWarnings = FALSE)
   appended_inputs <- append_standard_names(mapped_input_list, list_input_files)
-  
+
   silent <- mapply(function(x,y){
     write.csv(x,
               file = paste0("metLinkR_output/",gsub(".csv","",y),"_metLinkR.csv"),
               row.names = FALSE)
   },x = appended_inputs, y = myinputfiles$FileNames)
 
-  
+
   mapping_library <- merge_files(mapped_input_list,myinputfiles)
   multimappings <- find_multimapped_metabolites(mapping_library,myinputfiles)
-  
+
   if(long_mapping_library){
     mapping_library <- pivot_mapping_library(mapping_library)
   }
@@ -195,7 +199,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   xlsx::write.xlsx(as.data.frame(mapping_library),
                    file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
                    row.names=FALSE,sheetName="Mapping Library")
-  
+
   ## Write unmapped values to second sheet
   missed_mappings <- extract_missing_values(appended_inputs,myinputfiles)
   missed_mappings <- dplyr::bind_rows(as.vector(missed_mappings), .id = "Data File")
@@ -215,7 +219,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   browser()
   ## Write PDF report
   write_pdf_report(mapping_rates)
-  
+
   print("(5/5) Wrote output files to metLinkR_output/")
   return(mapping_library)
 }

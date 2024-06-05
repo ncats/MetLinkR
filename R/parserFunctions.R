@@ -2,7 +2,7 @@
 #' @return a list of input files
 readInputCSVs <- function(inputcsv){
   myinputfiles <- utils::read.csv(inputcsv, header=T)
-  
+
   list_input_files <- list()
   for (i in 1:nrow(myinputfiles)) {
     temp <- utils::read.csv(myinputfiles$FileNames[i], header=T)
@@ -12,9 +12,10 @@ readInputCSVs <- function(inputcsv){
   return(list_input_files)
 }
 
-##' @param ids 
-##' @param RaMP_prefixes 
-##' @return 
+
+##' @param ids A vector of metabolite ids
+##' @param RaMP_prefixes A vector of RaMP prefixes
+##' @return A vector of metabolite names
 ##' @author Patt
 parse_names <- function(ids, RaMP_prefixes){
   ## Remove saturation levels and MS1 ID status from Metabolon-style names
@@ -28,10 +29,10 @@ parse_names <- function(ids, RaMP_prefixes){
     }
     return(x)
   })
-  
+
   ## Remove unnamed Metabolon metabolites to speed up query
   list_names <- list_names[!grepl("X - ",substrLeft(list_names,4))]
-  
+
   list_names <- sapply(list_names,shQuote)
   list_names <- paste(list_names,collapse = ",")
   return(list_names)
@@ -51,15 +52,15 @@ append_standard_names <- function(mapped_input_list, list_input_files){
   return(out)
 }
 
-##' @param mapped_input_list 
-##' @param myinputfiles 
-##' @return 
+##' @param mapped_input_list Mapped input list
+##' @param myinputfiles Input files
+##' @return Merged files
 ##' @author Patt
-merge_files <- function(mapped_input_list,myinputfiles){
+merge_files <- function(mapped_input_list, myinputfiles){
   prefixes <- RaMP::getPrefixesFromAnalytes(db,"metabolite")$idTypes
   prefixes <- strsplit(prefixes, ", ")[[1]]
   prefixes <- paste(prefixes, collapse = ":|")
-  
+
   standard_name_list <-
     sapply(mapped_input_list,
            function(x){return(x$`Standardized name`)}) %>%
@@ -91,5 +92,5 @@ merge_files <- function(mapped_input_list,myinputfiles){
 }
 
 write_outputs <- function(){
-  
+
 }
