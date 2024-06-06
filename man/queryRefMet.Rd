@@ -17,21 +17,24 @@ queryRefMet(
 )
 }
 \arguments{
-\item{input_df}{}
+\item{input_df}{dataframe of metabolites}
 
-\item{filename}{}
+\item{filename}{name of file}
 
-\item{HMDB_col}{}
+\item{HMDB_col}{HMDB column name}
 
-\item{CID_col}{}
+\item{CID_col}{CID column name}
 
-\item{KEGG_col}{}
+\item{KEGG_col}{KEGG column name}
 
-\item{LM_col}{}
+\item{LM_col}{LM column name}
 
-\item{CHEBI_col}{}
+\item{CHEBI_col}{CHEBI column name}
 
-\item{metab_col}{#' @return a dataframe of RefMet query results: input/standardized name, classes, molecular formula, mass}
+\item{metab_col}{metabolite column name}
+
+\item{synonym_search}{boolean for whether to search synonyms
+#' @return a dataframe of RefMet query results: input/standardized name, classes, molecular formula, mass}
 }
 \description{
 Query RefMet for standardized names. Code from Eoin Fahy, received on 5/8/2023

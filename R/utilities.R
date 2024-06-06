@@ -24,8 +24,8 @@ replaceEmptys <- function(input_df) {
 ##' @param CID_col name of column containing PubChem IDs
 ##' @param KEGG_col name of column containing KEGG IDs
 ##' @param LM_col name of column containing LipidMaps IDs
-##' @param CHEBI_col
-##' @param metab_col
+##' @param CHEBI_col name of column containing ChEBI IDs
+##' @param metab_col name of column containing metabolite names
 ##' @return one id per metabolite based on preferred ID types
 ##' @author Andrew Patt
 extract_identifiers <- function(input_df, HMDB_col, CID_col,
@@ -122,10 +122,10 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
         id_vector <- c(id_vector, NA)
       } else {
         ## Use first ID if multiple IDs per cell are specified
-        if (grepl(";", na.omit(temp_vector)[1])) {
-          id_vector <- c(id_vector, strsplit(na.omit(temp_vector)[1], ";")[[1]][1])
+        if (grepl(";", stats::na.omit(temp_vector)[1])) {
+          id_vector <- c(id_vector, strsplit(stats::na.omit(temp_vector)[1], ";")[[1]][1])
         } else {
-          id_vector <- c(id_vector, na.omit(temp_vector)[1])
+          id_vector <- c(id_vector, stats::na.omit(temp_vector)[1])
         }
       }
     }else{
@@ -138,7 +138,7 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
       temp_df <- data.frame(x, temp_vector,1:length(temp_vector),origin_vector)
       id_df <- rbind(id_df,
                      temp_df)
-      
+
     }
     temp_vector <- c()
     origin_vector <- c()
@@ -176,9 +176,9 @@ massCheck <- function(synonym_DF) {
   return(out)
 }
 
-##' @param mapped_input_list 
-##' @param list_input_files 
-##' @return 
+##' @param mapped_input_list list of mapped input files
+##' @param list_input_files list of input files
+##' @return vector of mapping rates for each input file
 ##' @author Andrew Patt
 calculate_mapping_rates <- function(mapped_input_list, list_input_files,
                                     myinputfiles){
@@ -192,7 +192,7 @@ calculate_mapping_rates <- function(mapped_input_list, list_input_files,
                  return(length(unique(x$`Input name`)))))/
     sum(sapply(list_input_files, function(x)
       return(nrow(x))))
-  
+
   mapping_rates_str <- c()
   for(i in 1:length(mapping_rates)){
     mapping_rates_str <- c(mapping_rates_str,
