@@ -25,7 +25,7 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
     input_df = input_df, HMDB_col = HMDB_col, CID_col = CID_col,
     KEGG_col = KEGG_col, LM_col, CHEBI_col, metab_col
   )
-  colnames(id_df) <- c("rownum","ID","priority")
+  colnames(id_df) <- c("rownum","ID","priority","origin")
   id_vector <- id_df$ID
   if(synonym_search){
     id_vector = unique(id_vector)

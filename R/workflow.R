@@ -212,9 +212,10 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   ## Write text log
   write_txt_log(start_time,myinputfiles)
 
-  browser()
   ## Write PDF report
-  write_pdf_report(mapping_rates)
+  write_pdf_report(mapping_rates,
+                   mapped_list_input_files,
+                   mapped_list_synonyms)
   
   print("(5/5) Wrote output files to metLinkR_output/")
   return(mapping_library)

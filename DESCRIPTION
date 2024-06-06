@@ -15,7 +15,10 @@ Imports:
   parallel,
   crayon,
   xlsx,
-  ggplot2
+  ggplot2,
+  kableExtra,
+  rmarkdown,
+  cowplot
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

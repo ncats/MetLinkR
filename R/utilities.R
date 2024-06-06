@@ -35,67 +35,84 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
                                 ramp_prefixes = FALSE) {
   id_vector <- c()
   temp_vector <- c()
-  id_df <- as.data.frame(matrix(nrow=0,ncol=3))
-  colnames(id_df) <- c("rownum", "ID", "priority")
-
+  origin_vector <- c()
+  id_df <- as.data.frame(matrix(nrow=0,ncol=4))
+  colnames(id_df) <- c("rownum", "ID", "priority","origin")
   for (x in 1:nrow(input_df)) {
     if (ramp_prefixes) {
       if (!is.na(HMDB_col)) {
         if(is.na(input_df[x, HMDB_col])){
           temp_vector <- c(temp_vector,NA)
+          origin_vector <- c(origin_vector,NA)
         }else{
           temp_vector <- c(temp_vector, paste0("hmdb:", input_df[x, HMDB_col]))
+          origin_vector <- c(origin_vector, "hmdb")
         }
       }
       if (!is.na(KEGG_col)) {
         if(is.na(input_df[x, KEGG_col])){
           temp_vector <- c(temp_vector,NA)
+          origin_vector <- c(origin_vector,NA)
         }else{
           temp_vector <- c(temp_vector, paste0("kegg:", input_df[x, KEGG_col]))
+          origin_vector <- c(origin_vector, "kegg")
         }
       }
       if (!is.na(LM_col)) {
         if(is.na(input_df[x, LM_col])){
           temp_vector <- c(temp_vector,NA)
+          origin_vector <- c(origin_vector,NA)
         }else{
           temp_vector <- c(temp_vector, paste0("LIPIDMAPS:", input_df[x, LM_col]))
+          origin_vector <- c(origin_vector, "LIPIDMAPS")
         }
       }
       if (!is.na(CHEBI_col)) {
         if(is.na(input_df[x, CHEBI_col])){
           temp_vector <- c(temp_vector,NA)
+          origin_vector <- c(origin_vector,NA)
         }else{
           temp_vector <- c(temp_vector, paste0("chebi:", input_df[x, CHEBI_col]))
+          origin_vector <- c(origin_vector, "chebi")
         }
       }
       if (!is.na(metab_col)) {
         temp_vector <- c(temp_vector, input_df[x, metab_col])
+        origin_vector <- c(origin_vector, "common name")
       }
       if (!is.na(CID_col)) {
         if(is.na(input_df[x, CID_col])){
           temp_vector <- c(temp_vector,NA)
+          origin_vector <- c(origin_vector,NA)
         }else{
           temp_vector <- c(temp_vector, paste0("CAS:", input_df[x, CID_col]))
+          origin_vector <- c(origin_vector,"CAS")
         }
       }
     } else {
       if (!is.na(HMDB_col)) {
         temp_vector <- c(temp_vector, input_df[x, HMDB_col])
+        origin_vector <- c(origin_vector, "hmdb")
       }
       if (!is.na(KEGG_col)) {
         temp_vector <- c(temp_vector, input_df[x, KEGG_col])
+        origin_vector <- c(origin_vector, "kegg")
       }
       if (!is.na(LM_col)) {
         temp_vector <- c(temp_vector, input_df[x, LM_col])
+        origin_vector <- c(origin_vector, "LIPIDMAPS")
       }
       if (!is.na(CHEBI_col)) {
         temp_vector <- c(temp_vector, input_df[x, CHEBI_col])
+        origin_vector <- c(origin_vector, "chebi")
       }
       if (!is.na(metab_col)) {
         temp_vector <- c(temp_vector, input_df[x, metab_col])
+        origin_vector <- c(origin_vector, "common name")
       }
       if (!is.na(CID_col)) {
         temp_vector <- c(temp_vector, input_df[x, CID_col])
+        origin_vector <- c(origin_vector, "CAS")
       }
     }
 
@@ -113,14 +130,18 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
       }
     }else{
       if(any(grepl(";",temp_vector))){
+        multi_index <- which(grepl(";",temp_vector))
+        origin_vector <- append(origin_vector, origin_vector[multi_index],
+                                after = multi_index)
         temp_vector <- unlist(strsplit(temp_vector,";"))
       }
-      temp_df <- data.frame(x, temp_vector,1:length(temp_vector))
+      temp_df <- data.frame(x, temp_vector,1:length(temp_vector),origin_vector)
       id_df <- rbind(id_df,
                      temp_df)
       
     }
     temp_vector <- c()
+    origin_vector <- c()
   }
   return(ifelse(ramp_prefixes,return(id_vector),return(id_df)))
 }
