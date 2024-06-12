@@ -107,7 +107,7 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
     return(out)
   })
   synonym_classes <- lapply(mapped_list_synonyms, function(x){
-    if(is(x, "data.frame")){
+    if(methods::is(x, "data.frame")){
       temp <- x %>%
         dplyr::select("Standardized name","Super class") %>%
         dplyr::filter(`Standardized name` != "-") %>%
@@ -155,7 +155,7 @@ write_id_rates <- function(mapped_list_input_files,mapped_list_synonyms){
     return(x$origin[which(!is.na(x$origin))])
   })
   id_origins <- mapply(function(x,y){
-    if(is(y, "data.frame")){
+    if(methods::is(y, "data.frame")){
       out <- c(x, rep("RaMP",
                       times = length(unique(y$`Standardized name`))-1))
       return(out)

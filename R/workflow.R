@@ -183,7 +183,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   appended_inputs <- append_standard_names(mapped_input_list, list_input_files)
 
   silent <- mapply(function(x,y){
-    write.csv(x,
+    utils::write.csv(x,
               file = paste0("metLinkR_output/",gsub(".csv","",y),"_metLinkR.csv"),
               row.names = FALSE)
   },x = appended_inputs, y = myinputfiles$FileNames)
