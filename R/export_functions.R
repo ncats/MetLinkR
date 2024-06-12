@@ -1,13 +1,13 @@
 pivot_mapping_library <- function(mappings){
   out <- mappings %>%
     tidyr::pivot_longer(
-      cols = !`Harmonized name`, 
-      names_to = c(".value", "Origin file"), 
-      names_sep = " \\(", 
+      cols = !`Harmonized name`,
+      names_to = c(".value", "Origin file"),
+      names_sep = " \\(",
       values_drop_na = TRUE
     ) %>%
     dplyr::filter(`Input name` != "-") %>%
-    dplyr::mutate(`Origin file` = gsub("\\)","",`Origin file`))  
+    dplyr::mutate(`Origin file` = gsub("\\)","",`Origin file`))
     return(out)
 }
 
@@ -16,7 +16,7 @@ extract_missing_values <- function(appended_inputs,myinputfiles){
     y <-as.vector(y) %>% unlist
     names(y) <- colnames(myinputfiles)[-1]
     rows <- x %>% dplyr::filter(is.na(`Standardized name`))
-    
+
     identifiers <- c(y["HMDB"],y["PubChem_CID"],y["KEGG"],
                      y["LIPIDMAPS"],y["chebi"],y["Metabolite_Name"])
     out<-lapply(identifiers, function(z){
@@ -84,13 +84,13 @@ plot_mapping_rates <- function(mapping_rates){
   mapping_rates$dataset <- factor(mapping_rates$dataset,
                                   levels = mapping_rates$dataset)
   colors <- c("1", rep("2",times=nrow(mapping_rates)-1))
-  p <- ggplot(mapping_rates,aes(x = dataset,
+  p <- ggplot2::ggplot(mapping_rates, ggplot2::aes(x = dataset,
                                 y = mapping_rates,fill = colors)) +
-    geom_bar(stat = "identity") +
-    scale_fill_manual(values = c("goldenrod","grey40")) +
-    theme_classic() +
-    labs(x = "Dataset",y = "Mapping Rate") +
-    guides(fill="none")
+    ggplot2::geom_bar(stat = "identity") +
+    ggplot2::scale_fill_manual(values = c("goldenrod","grey40")) +
+    ggplot2::theme_classic() +
+    ggplot2::labs(x = "Dataset",y = "Mapping Rate") +
+    ggplot2::guides(fill="none")
   return(p)
 }
 
@@ -118,15 +118,15 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
   classes <- mapply(function(x,y){
     return(c(x,y))
   },x = refmet_classes, y = synonym_classes)
-  
+
   plot_list <- mapply(function(x,y){
-    class_table <- as.data.frame(table(x))    
-    p <- ggplot(class_table, aes(x = x, y = Freq)) +
-      geom_bar(stat = "identity") +
-      theme_classic() +
-      labs(x = "ClassyFire SuperClass",y = "Count") +
-      ggtitle(paste0(y, " Mapped Chemical Classes")) +
-      theme(axis.text.x = element_text(angle = -45, hjust=0),
+    class_table <- as.data.frame(table(x))
+    p <- ggplot2::ggplot(class_table, ggplot2::aes(x = x, y = Freq)) +
+      ggplot2::geom_bar(stat = "identity") +
+      ggplot2::theme_classic() +
+      ggplot2::labs(x = "ClassyFire SuperClass",y = "Count") +
+      ggplot2::ggtitle(paste0(y, " Mapped Chemical Classes")) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = -45, hjust=0),
       plot.margin = margin(1,2,1.5,1.2, "cm"))
     return(p)
   }, x = classes, y = names(classes),SIMPLIFY=FALSE)
@@ -170,17 +170,17 @@ write_id_rates <- function(mapped_list_input_files,mapped_list_synonyms){
   return(table_list)
 }
 
-  
+
 write_pdf_report <- function(mapping_rates,
                              mapped_list_input_files,
                              mapped_list_synonyms){
   cat("---
 title: \"MetLinkR Report\"
-author: 
-date: \"`r format(Sys.time(), '%d %B, %Y')`\" 
+author:
+date: \"`r format(Sys.time(), '%d %B, %Y')`\"
 output: pdf_document
 ---
-  
+
 \`\`\`{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, fig.height = 3)
 \`\`\`
