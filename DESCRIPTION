@@ -9,7 +9,6 @@ Imports:
     magrittr,
     dplyr,
     tidyr,
-    stringr,
     httr,
     RaMP,
     parallel,

@@ -38,7 +38,7 @@ extract_missing_values <- function(appended_inputs,myinputfiles){
 
 find_multimapped_metabolites <- function(mapping_library,myinputfiles){
   inputs <- mapping_library %>%
-    dplyr::select(`Harmonized name`,starts_with("Input name"))
+    dplyr::select(`Harmonized name`, dplyr::starts_with("Input name"))
   out <- matrix(ncol=3,nrow=0)
   for(i in 2:ncol(inputs)){
     if(any(duplicated(inputs[,i]))){
@@ -71,7 +71,7 @@ write_txt_log <- function(start_time,myinputfiles){
   cat("\n")
   cat("Session Info:",
       "\n")
-  print(sessionInfo())
+  print(utils::sessionInfo())
   sink()
   sink.reset()
 }
@@ -107,12 +107,12 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
     return(out)
   })
   synonym_classes <- lapply(mapped_list_synonyms, function(x){
-    if(class(x)=="data.frame"){
+    if(is(x, "data.frame")){
       temp <- x %>%
         dplyr::select("Standardized name","Super class") %>%
         dplyr::filter(`Standardized name` != "-") %>%
         unique %>%
-        pull("Super class")
+        dplyr::pull("Super class")
     }
   })
   classes <- mapply(function(x,y){
@@ -155,7 +155,7 @@ write_id_rates <- function(mapped_list_input_files,mapped_list_synonyms){
     return(x$origin[which(!is.na(x$origin))])
   })
   id_origins <- mapply(function(x,y){
-    if(class(y)=="data.frame"){
+    if(is(y, "data.frame")){
       out <- c(x, rep("RaMP",
                       times = length(unique(y$`Standardized name`))-1))
       return(out)
