@@ -19,13 +19,17 @@ replaceEmptys <- function(input_df) {
   return(input_df)
 }
 
+##' @title Extract identifiers
+##'
 ##' @param input_df a dataframe with metabolite names, ids (HMDB, CID), information
 ##' @param HMDB_col name of column containing HMDB IDs
 ##' @param CID_col name of column containing PubChem IDs
 ##' @param KEGG_col name of column containing KEGG IDs
 ##' @param LM_col name of column containing LipidMaps IDs
 ##' @param CHEBI_col name of column containing ChEBI IDs
+##' @param ramp_prefixes boolean for whether to add RaMP prefixes to IDs
 ##' @param metab_col name of column containing metabolite names
+##'
 ##' @return one id per metabolite based on preferred ID types
 ##' @author Andrew Patt
 extract_identifiers <- function(input_df, HMDB_col, CID_col,
@@ -146,7 +150,10 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
   return(ifelse(ramp_prefixes,return(id_vector),return(id_df)))
 }
 
-##' @param rampId_DF RaMP IDs for mass check
+##' @title Mass Check
+##'
+##' @param synonym_DF dataframe of synonyms
+##'
 ##' @return dataframe with three possible values per rampId: species, class or invalid
 ##' @author Iris Pang, Andrew Patt
 massCheck <- function(synonym_DF) {
@@ -176,8 +183,12 @@ massCheck <- function(synonym_DF) {
   return(out)
 }
 
+##' @title Calculate Mapping Rates
+##'
 ##' @param mapped_input_list list of mapped input files
+##' @param myinputfiles list of input files
 ##' @param list_input_files list of input files
+##'
 ##' @return vector of mapping rates for each input file
 ##' @author Andrew Patt
 calculate_mapping_rates <- function(mapped_input_list, list_input_files,

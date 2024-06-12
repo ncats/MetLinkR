@@ -1,3 +1,4 @@
+#' @title Read Input CSVs
 #' @param inputcsv character of pathway to csv containing names of files with metabolite names
 #' @return a list of input files
 readInputCSVs <- function(inputcsv){
@@ -13,8 +14,11 @@ readInputCSVs <- function(inputcsv){
 }
 
 
+##' @title Parse Names
 ##' @param ids A vector of metabolite ids
+##'
 ##' @param RaMP_prefixes A vector of RaMP prefixes
+##'
 ##' @return A vector of metabolite names
 ##' @author Patt
 parse_names <- function(ids, RaMP_prefixes){
@@ -52,6 +56,7 @@ append_standard_names <- function(mapped_input_list, list_input_files){
   return(out)
 }
 
+##' @title Merge Files
 ##' @param mapped_input_list Mapped input list
 ##' @param myinputfiles Input files
 ##' @return Merged files
