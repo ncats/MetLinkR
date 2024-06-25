@@ -27,7 +27,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   myinputfiles <- utils::read.csv(inputcsv, header = T)
   list_input_files <- readInputCSVs(inputcsv)
   myinputfiles_list <- as.list(data.frame(t(myinputfiles)))
-  myinputfiles_list <- parallel::mclapply(myinputfiles_list, function(x) {
+  myinputfiles_list <- lapply(myinputfiles_list, function(x) {
     out <- t(data.frame(x))
     colnames(out) <- colnames(myinputfiles)
     return(as.data.frame(out))
@@ -37,22 +37,20 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   ##########################################################################
   ## 2. Initial RefMet mappings                                           ##
   ##########################################################################
-  mapped_list_input_files <- parallel::mcmapply(function(x, y) {
-    queryRefMet(
-      input_df = x,
-      filename = y$ShortFileName,
-      HMDB_col = y$HMDB,
-      metab_col = y$Metabolite_Name,
-      CID_col = y$PubChem_CID,
-      KEGG_col =y$KEGG,
-      LM_col = y$LIPIDMAPS,
-      CHEBI_col = y$chebi
-    )
-  }, x = list_input_files,
-  y = myinputfiles_list,
-  SIMPLIFY = FALSE)
+  mapped_list_input_files <- foreach(i = 1:length(list_input_files)) %dopar% {
+      metLinkR:::queryRefMet(
+        input_df = list_input_files[[i]],
+        filename = myinputfiles_list[[i]]$ShortFileName,
+        HMDB_col = myinputfiles_list[[i]]$HMDB,
+        metab_col = myinputfiles_list[[i]]$Metabolite_Name,
+        CID_col = myinputfiles_list[[i]]$PubChem_CID,
+        KEGG_col =myinputfiles_list[[i]]$KEGG,
+        LM_col = myinputfiles_list[[i]]$LIPIDMAPS,
+        CHEBI_col = myinputfiles_list[[i]]$chebi
+      )
+  }
 
-  refmet_mapped_ids <- parallel::mclapply(
+  refmet_mapped_ids <- lapply(
     mapped_list_input_files,
     function(x) {
       return(x %>%
@@ -79,16 +77,11 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
            )
   }, x = mapped_list_input_files, y = refmet_mapped_ids)
 
-  ## refmet_unmapped_ids <- list()
-  ## for (i in 1:length(list_input_files)) {
-  ##   refmet_unmapped_ids[[i]] <-
-  ##     list_input_files[[i]][which(mapped_list_input_files[[i]]$`Standardized name` == "-"), ]
-  ## }
   refmet_unmapped_ids <- mapply(function(x,y){
     return(x[-y,])
   }, x = list_input_files, y = mapped_rownums, SIMPLIFY = FALSE)
 
-  missed_ids <- parallel::mcmapply(function(x, y) {
+  missed_ids <- mapply(function(x, y) {
     if(nrow(x)==0){
       return(NA)
     }else{
@@ -102,24 +95,37 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     }
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
-  db <<- RaMP::RaMP()
-  synonym_table_list <- parallel::mclapply(missed_ids, queryRampSynonyms)
+  clusterEvalQ(cluster,db <<- RaMP::RaMP())
+  synonym_table_list <- parallel::parLapply(cl=cluster,missed_ids, queryRampSynonyms)
   message("(3/5) Found RaMP synonyms for unmapped inputs")
   ##########################################################################
   ## 4. Re-Query RefMet with synonym table                                ##
   ##########################################################################
 
-  mapped_list_synonyms <- parallel::mcmapply(function(x, y) {
-    queryRefMet(
-      input_df = x,
-      filename = paste0("synonym_table_", y$ShortFileName),
-      HMDB_col = NA,
-      metab_col = "Synonym",
-      CID_col = NA,
-      synonym_search = TRUE
-    )
-  }, x = synonym_table_list, y = myinputfiles_list, SIMPLIFY = FALSE)
+  ## mapped_list_synonyms <- parallel::mcmapply(function(x, y) {
+  ##   queryRefMet(
+  ##     input_df = x,
+  ##     filename = paste0("synonym_table_", y$ShortFileName),
+  ##     HMDB_col = NA,
+  ##     metab_col = "Synonym",
+  ##     CID_col = NA,
+  ##     synonym_search = TRUE
+  ##   )
+  ## }, x = synonym_table_list, y = myinputfiles_list, SIMPLIFY = FALSE)
 
+    mapped_list_synonyms <- foreach(i = 1:length(list_input_files)) %dopar% {
+      metLinkR:::queryRefMet(
+        input_df = synonym_table_list[[i]],
+        filename = paste0("synonym_table_",myinputfiles_list[[i]]$ShortFileName),
+        HMDB_col = NA,
+        metab_col = "Synonym",
+        CID_col = NA,
+        KEGG_col = NA,
+        LM_col = NA,
+        CHEBI_col = NA
+      )
+  }
+  
   refmet_mapped_synonyms <- list()
   for (i in 1:length(mapped_list_synonyms)) {
     if(length(mapped_list_synonyms[[i]])==1){
@@ -136,7 +142,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   }
 
   ## Fix rownums
-  refmet_mapped_synonyms <- parallel::mcmapply(function(x,y){
+  refmet_mapped_synonyms <- mapply(function(x,y){
     if(is.logical(y)){
       return(NA)
     }else{
@@ -160,7 +166,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     },x = list_input_files, y = refmet_mapped_synonyms)
   message("(4/5) Queried RaMP synonyms in RefMet")
 
-  mapped_input_list <- parallel::mcmapply(function(x, y) {
+  mapped_input_list <- mapply(function(x, y) {
     if(length(y)==1){
       x
     }else{

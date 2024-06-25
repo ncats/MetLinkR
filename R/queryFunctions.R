@@ -14,7 +14,7 @@
 #' \dontrun{
 #' queryResults <- queryRefMet(mets = "2'-Deoxyuridine")
 #' }
-#'
+#' @export
 queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
                         LM_col = NA, CHEBI_col = NA,
                         metab_col,synonym_search=FALSE) {
