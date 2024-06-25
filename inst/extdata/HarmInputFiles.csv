@@ -1,6 +1,0 @@
-FileNames,ShortFileName,HMDB,Metabolite_Name,PubChem_CID,yesORnoCID
-example_data/SamplefromCOMETS.csv,inputfile,HMDB_ID,metabolite_name,PUBCHEM,y
-example_data/2019_Metabolon_Metadata.csv,VickyFile,HMDB,BIOCHEMICAL.NAME,PUBCHEM,y
-example_data/Metabolon_Annotations_Serum_hmdbformatted.csv,JohnFile,HMDB,CHEMICAL_NAME,PUBCHEM,y
-example_data/CSVModifiedBroadfilefromVicky20182019.csv,broadfileVicky,HMDB_ID,Metabolite,,n
-example_data/Broad_2022Aug_annotations.csv,broadfileEwy,hmdbId,Metabolite,pubChemId,y

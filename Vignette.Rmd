@@ -1,0 +1,29 @@
+---
+title: MetLinkR Vignette
+author: "Andrew Patt"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    self_contained: yes
+    highlight: kate
+    theme: yeti
+    toc: yes
+    fig_width: 9
+    fig_height: 7
+    code_folding: show
+vignette: >
+  %\VignetteIndexEntry{Running MetLinkR locally}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Introduction
+
+This vignette showcases the functionality of the metLinkR R package, the code for which can be found at [our github site](https://github.com/andyptt21/metLinkR).
+
+## Setting up parallel computing
+
+## Running harmonization
+
+## Exploring outputs
+
