@@ -19,8 +19,10 @@
 #' @export
 
 harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
-                                 long_mapping_library = TRUE) {
+                                 long_mapping_library = TRUE, n_cores = 1) {
   start_time <- Sys.time()
+  cluster <- parallel::makeCluster(n_cores)
+  doParallel::registerDoParallel(cluster)
   ##########################################################################
   ## 1. Read in input files. Output a list of dataframes                  ##
   ##########################################################################
