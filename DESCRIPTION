@@ -6,19 +6,20 @@ Authors@R:
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 Imports:
-  magrittr,
-  dplyr,
-  tidyr,
-  stringr,
-  httr,
-  RaMP,
-  parallel,
-  crayon,
-  xlsx,
-  ggplot2,
-  kableExtra,
-  rmarkdown,
-  cowplot
+    magrittr,
+    dplyr,
+    tidyr,
+    httr,
+    RaMP,
+    parallel,
+    crayon,
+    xlsx,
+    ggplot2,
+    kableExtra,
+    rmarkdown,
+    cowplot,
+    rlang,
+    methods
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

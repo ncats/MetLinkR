@@ -56,7 +56,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     mapped_list_input_files,
     function(x) {
       return(x %>%
-               mutate("Origin" = "Raw input") %>%
+               dplyr::mutate("Origin" = "Raw input") %>%
                ## mutate("classFlag" = "RefMet") %>%
                dplyr::filter(`Standardized name` != "-") %>%
                dplyr::group_by(rownum) %>%
@@ -183,7 +183,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   appended_inputs <- append_standard_names(mapped_input_list, list_input_files)
 
   silent <- mapply(function(x,y){
-    write.csv(x,
+    utils::write.csv(x,
               file = paste0("metLinkR_output/",gsub(".csv","",y),"_metLinkR.csv"),
               row.names = FALSE)
   },x = appended_inputs, y = myinputfiles$FileNames)
@@ -220,7 +220,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   write_pdf_report(mapping_rates,
                    mapped_list_input_files,
                    mapped_list_synonyms)
-  
+
 
   print("(5/5) Wrote output files to metLinkR_output/")
   return(mapping_library)
