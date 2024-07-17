@@ -57,7 +57,7 @@ append_standard_names <- function(mapped_input_list, list_input_files){
 ##' @return Merged files
 ##' @author Patt
 merge_files <- function(mapped_input_list, myinputfiles){
-  prefixes <- RaMP::getPrefixesFromAnalytes(db,"metabolite")$idTypes
+  prefixes <- RaMP::getPrefixesFromAnalytes(analyteType="metabolite")$idTypes
   prefixes <- strsplit(prefixes, ", ")[[1]]
   prefixes <- paste(prefixes, collapse = ":|")
 
@@ -91,6 +91,3 @@ merge_files <- function(mapped_input_list, myinputfiles){
   return(merged_df)
 }
 
-write_outputs <- function(){
-
-}

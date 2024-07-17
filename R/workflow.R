@@ -1,16 +1,13 @@
 #' Run total harmonization of metabolites
 #'
 #' @param inputcsv character of pathway to csv containing names of files with metabolite names
-#' @param outputFileName character of output file
-#' @param writecsv boolean for whether or not to write a csv file of the dataframe with harmonized files
-#' @param long_mapping_library boolean for whether or not to pivot the mapping library
+#' @param mapping_library_format string, print library in "wide" format, "long" format, or "both"
 #'
 #' @return a dataframe containing harmonized files across all input files listed in inputcsv
 #' @examples
 #' \dontrun{
 #' finalHarmonized <- runHarmonization(
-#'   inputcsv = "HarmInputFiles.csv",
-#'   outputFileName = "exampleharmonizedfile"
+#'   inputcsv = "HarmInputFiles.csv"
 #' )
 #' }
 #'
@@ -18,11 +15,15 @@
 #'
 #' @export
 
-harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
-                                 long_mapping_library = TRUE, n_cores = 1) {
+harmonizeInputSheets <- function(inputcsv,
+                                 mapping_library_format = "both", n_cores = 1) {
   start_time <- Sys.time()
   cluster <- parallel::makeCluster(n_cores)
   doParallel::registerDoParallel(cluster)
+  on.exit(stopCluster(cluster))
+  if(!(mapping_library_format %in% c("long","wide","both"))){
+    stop("'mapping library format' must be one of 'long', 'wide', or 'both'")
+  }
   ##########################################################################
   ## 1. Read in input files. Output a list of dataframes                  ##
   ##########################################################################
@@ -56,7 +57,7 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     mapped_list_input_files,
     function(x) {
       return(x %>%
-               mutate("Origin" = "Raw input") %>%
+               mutate("Origin" = "Original input") %>%
                ## mutate("classFlag" = "RefMet") %>%
                dplyr::filter(`Standardized name` != "-") %>%
                dplyr::group_by(rownum) %>%
@@ -97,23 +98,12 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
     }
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
-  clusterEvalQ(cluster,db <<- RaMP::RaMP())
+  parallel::clusterEvalQ(cluster,db <<- RaMP::RaMP())
   synonym_table_list <- parallel::parLapply(cl=cluster,missed_ids, queryRampSynonyms)
   message("(3/5) Found RaMP synonyms for unmapped inputs")
   ##########################################################################
   ## 4. Re-Query RefMet with synonym table                                ##
   ##########################################################################
-
-  ## mapped_list_synonyms <- parallel::mcmapply(function(x, y) {
-  ##   queryRefMet(
-  ##     input_df = x,
-  ##     filename = paste0("synonym_table_", y$ShortFileName),
-  ##     HMDB_col = NA,
-  ##     metab_col = "Synonym",
-  ##     CID_col = NA,
-  ##     synonym_search = TRUE
-  ##   )
-  ## }, x = synonym_table_list, y = myinputfiles_list, SIMPLIFY = FALSE)
 
     mapped_list_synonyms <- foreach(i = 1:length(list_input_files)) %dopar% {
       metLinkR:::queryRefMet(
@@ -162,10 +152,14 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
           rownums <- c(rownums, NA)
         }
       }
-      return(y %>%
-               dplyr::mutate(rownum = rownums))
+      if(nrow(y)==0){
+        return(NA)
+      }else{
+        return(y %>%
+                 dplyr::mutate(rownum = rownums))
+      }
     }
-    },x = list_input_files, y = refmet_mapped_synonyms)
+  },x = list_input_files, y = refmet_mapped_synonyms)
   message("(4/5) Queried RaMP synonyms in RefMet")
 
   mapped_input_list <- mapply(function(x, y) {
@@ -200,32 +194,50 @@ harmonizeInputSheets <- function(inputcsv, outputFileName, writecsv,
   mapping_library <- merge_files(mapped_input_list,myinputfiles)
   multimappings <- find_multimapped_metabolites(mapping_library,myinputfiles)
 
-  if(long_mapping_library){
+  if(mapping_library_format=="wide"){
+    xlsx::write.xlsx(as.data.frame(mapping_library),
+                     file = paste0("metLinkR_output/mapping_library.xlsx"),
+                     row.names=FALSE,sheetName="Mapping Library")
+  }else if(mapping_library_format=="long"){
     mapping_library <- pivot_mapping_library(mapping_library)
+    xlsx::write.xlsx(as.data.frame(mapping_library),
+                     file = paste0("metLinkR_output/mapping_library.xlsx"),
+                     row.names=FALSE,sheetName="Mapping Library")
+  }else{
+    xlsx::write.xlsx(as.data.frame(mapping_library),
+                     file = paste0("metLinkR_output/mapping_library.xlsx"),
+                     row.names=FALSE,sheetName="Mapping Library Wide")
+    mapping_library <- pivot_mapping_library(mapping_library)
+    xlsx::write.xlsx(as.data.frame(mapping_library),
+                     file = paste0("metLinkR_output/mapping_library.xlsx"),
+                     row.names=FALSE,sheetName="Mapping Library Long", append = TRUE)
   }
 
-  xlsx::write.xlsx(as.data.frame(mapping_library),
-                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
-                   row.names=FALSE,sheetName="Mapping Library")
-
-  ## Write unmapped values to second sheet
+  ## Write unmapped values 
   missed_mappings <- extract_missing_values(appended_inputs,myinputfiles)
+  missed_mappings <- lapply(missed_mappings, function(x){
+    return(x %>%
+             dplyr::mutate(across(everything(),
+                                  as.character)))
+  })
   missed_mappings <- dplyr::bind_rows(as.vector(missed_mappings), .id = "Data File")
   xlsx::write.xlsx(missed_mappings,
-                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
+                   file = paste0("metLinkR_output/mapping_library.xlsx"),
                    row.names=FALSE,sheetName="Missed Metabolites",
                    append = TRUE,showNA=FALSE)
 
-  ## Write multi-mapped metabolites to third sheet
+  ## Write multi-mapped metabolites
   xlsx::write.xlsx(multimappings,
-                   file = paste0("metLinkR_output/",outputFileName, ".xlsx"),
+                   file = paste0("metLinkR_output/mapping_library.xlsx"),
                    row.names=FALSE,sheetName="MultiMapped Metabolites",
                    append = TRUE,showNA=FALSE)
   ## Write text log
   write_txt_log(start_time,myinputfiles)
-
+  names(mapping_rates[[2]]) = names(mapped_list_input_files) =
+    names(mapped_list_synonyms) = myinputfiles$ShortFileName
+  
   ## Write PDF report
-  write_pdf_report(mapping_rates,
+  write_html_report(mapping_rates,
                    mapped_list_input_files,
                    mapped_list_synonyms)
   
