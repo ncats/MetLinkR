@@ -57,7 +57,7 @@ harmonizeInputSheets <- function(inputcsv,
     mapped_list_input_files,
     function(x) {
       return(x %>%
-               mutate("Origin" = "Original input") %>%
+               dplyr::mutate("Origin" = "Original input") %>%
                ## mutate("classFlag" = "RefMet") %>%
                dplyr::filter(`Standardized name` != "-") %>%
                dplyr::group_by(rownum) %>%
