@@ -44,13 +44,15 @@ extract_missing_values <- function(appended_inputs, myinputfiles) {
 
 find_multimapped_metabolites <- function(mapping_library, myinputfiles) {
   inputs <- mapping_library %>%
-    dplyr::select(`Harmonized name`, dplyr::starts_with("Input name"))
-  out <- matrix(ncol = 3, nrow = 0)
-  for (i in 2:ncol(inputs)) {
-    if (any(duplicated(inputs[, i]))) {
-      duplicates <- inputs[which(duplicated(inputs[, i])), c(1, i)]
-      duplicates <- duplicates[!apply(duplicates == "-", 1, any), ]
-      duplicates <- cbind(rep(myinputfiles$ShortFileName[i], nrow(duplicates)), duplicates)
+    dplyr::select(`Harmonized name`,starts_with("Input name"))
+  out <- matrix(ncol=3,nrow=0)
+  for(i in 2:ncol(inputs)){
+    if(any(duplicated(inputs[,i]))){
+      duplicates <- inputs[which(duplicated(inputs[,i])),c(1,i)]
+      duplicates <- duplicates[!apply(duplicates=="-",1,any),]
+      duplicates <- cbind(rep(myinputfiles$ShortFileName[i-1],nrow(duplicates)),
+                          duplicates)
+      colnames(out) <- colnames(duplicates)
       out <- rbind(out, duplicates)
     }
   }
@@ -82,15 +84,17 @@ plot_mapping_rates <- function(mapping_rates) {
   names(mapping_rates)[1] <- "Global"
   mapping_rates <- data.frame(mapping_rates)
   mapping_rates$dataset <- rownames(mapping_rates)
-  mapping_rates$dataset <- factor(mapping_rates$dataset, levels = mapping_rates$dataset)
-  colors <- c("1", rep("2", times = nrow(mapping_rates) - 1))
-  p <- ggplot2::ggplot(mapping_rates,
-                       ggplot2::aes(x = dataset, y = mapping_rates, fill = colors)) +
-    ggplot2::geom_bar(stat = "identity") +
-    ggplot2::scale_fill_manual(values = c("goldenrod", "grey40")) +
-    ggplot2::theme_classic() +
-    ggplot2::labs(x = "Dataset", y = "Mapping Rate") +
-    ggplot2::guides(fill = "none")
+  mapping_rates$dataset <- factor(mapping_rates$dataset,
+                                  levels = mapping_rates$dataset)
+  colors <- c("1", rep("2",times=nrow(mapping_rates)-1))
+  p <- ggplot(mapping_rates,aes(x = dataset,
+                                y = mapping_rates,fill = colors)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c("goldenrod","grey40")) +
+    theme_classic() +
+    labs(x = "Dataset",y = "Mapping Rate") +
+    guides(fill="none") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
   return(p)
 }
 
@@ -104,8 +108,12 @@ plot_chemical_classes <- function(mapped_list_input_files,
   })
   refmet_classes <- lapply(mapped_list_input_files, function(x) {
     out <- x$`Super class`[which(!is.na(x$`Super class`))]
-    out <- out[-which(out == "-")]
-    out <- out[-which(out == "")]
+    if(any(out=="-")){
+      out <- out[-which(out=="-")]
+    }
+    if(any(out=="")){
+      out <- out[-which(out=="")]
+    }
     return(out)
   })
   synonym_classes <- lapply(mapped_list_synonyms, function(x) {
@@ -140,18 +148,9 @@ plot_chemical_classes <- function(mapped_list_input_files,
   return(plot_list)
 }
 
-meta_plotting <- function(chemical_plots) {
-  splitted_plots <- split(chemical_plots, ceiling(seq_along(chemical_plots) /
-                                                    3))
-  ## if(length(splitted_plots[[length(splitted_plots)]])!=3){
-  ##   n_empty <- 3 - length(splitted_plots[[length(splitted_plots)]])
-  ##   splitted_plots[[length(splitted_plots)]] =
-  ##     append(splitted_plots[[length(splitted_plots)]],
-  ##            rep(ggplot() + theme_void(),times = n_empty))
-  ## }
-  lapply(splitted_plots, function(x)
-    cowplot::plot_grid(plotlist = x, ncol = 1))
-
+meta_plotting <- function(chemical_plots){
+  splitted_plots <- split(chemical_plots, ceiling(seq_along(chemical_plots)/3))
+  lapply(splitted_plots, function(x) cowplot::plot_grid(plotlist = x,ncol = 1))
 }
 
 write_id_rates <- function(mapped_list_input_files,
@@ -182,16 +181,20 @@ write_id_rates <- function(mapped_list_input_files,
   return(table_list)
 }
 
-
-write_pdf_report <- function(mapping_rates,
+  
+write_html_report <- function(mapping_rates,
                              mapped_list_input_files,
                              mapped_list_synonyms) {
   cat(
     "---
 title: \"MetLinkR Report\"
-author:
-date: \"`r format(Sys.time(), '%d %B, %Y')`\"
-output: pdf_document
+author: 
+date: \"`r format(Sys.time(), '%d %B, %Y')`\" 
+output:
+  html_document:
+    code_folding: hide
+    theme: cerulean
+    highlight: tango
 ---
 
 \`\`\`{r setup, include=FALSE}
@@ -209,9 +212,9 @@ write_id_rates(mapped_list_input_files,mapped_list_synonyms)
 \`\`\`
 
 ## Chemical Class Breakdown by File
-\`\`\`{r,fig.height=12,warnings = FALSE, message = FALSE, fig.width = 12}
+\`\`\`{r,fig.height=7,warnings = FALSE, message = FALSE, fig.width = 12}
 suppressWarnings({
-meta_plotting(plot_chemical_classes(mapped_list_input_files,mapped_list_synonyms))
+plot_chemical_classes(mapped_list_input_files,mapped_list_synonyms)
 })
 \`\`\`
 
