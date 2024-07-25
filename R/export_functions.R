@@ -96,6 +96,15 @@ plot_mapping_rates <- function(mapping_rates){
   return(p)
 }
 
+plot_mapping_overlap <- function(mapping_library){
+  listInput <- lapply(unique(mapping_library$`Origin file`), function(x){
+    mapping_library %>% dplyr::filter(`Origin file` == x) %>%
+      pull(`Harmonized name`)
+  })
+  names(listInput) <- unique(mapping_library$`Origin file`)
+  UpSetR::upset(UpSetR::fromList(listInput), order.by = "freq",nsets=10)
+}
+
 plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
   mapped_list_input_files <- lapply(mapped_list_input_files, function(x){
     x %>%
@@ -133,7 +142,7 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
       labs(x = "ClassyFire SuperClass",y = "Count") +
       ggtitle(paste0(y, " Mapped Chemical Classes")) +
       theme(axis.text.x = element_text(angle = -45, hjust=0),
-      plot.margin = margin(1,2,1.5,1.2, "cm"))
+      plot.margin = ggplot2::margin(1,2,1.5,1.2, "cm"))
     return(p)
   }, x = classes, y = names(classes),SIMPLIFY=FALSE)
   return(plot_list)
@@ -172,33 +181,50 @@ write_id_rates <- function(mapped_list_input_files,mapped_list_synonyms){
   
 write_html_report <- function(mapping_rates,
                              mapped_list_input_files,
-                             mapped_list_synonyms){
+                             mapped_list_synonyms,
+                             mapping_library_long){
   cat("---
 title: \"MetLinkR Report\"
 author: 
 date: \"`r format(Sys.time(), '%d %B, %Y')`\" 
 output:
   html_document:
-    code_folding: hide
     theme: cerulean
     highlight: tango
+    toc: true
+    toc_float:
+      toc_collapsed: true
+    number_sections: true
+
 ---
   
 \`\`\`{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, fig.height = 3)
 \`\`\`
 
-## Metabolite Mapping Rates
-\`\`\`{r}
+# Metabolite Mapping Rates
+\`\`\`{r,results = \'asis\'}
+mr_table <- as.data.frame(mapping_rates)
+colnames(mr_table)[[1]] <- 'Global'
+mr_table <- t(round(mr_table,3))
+kableExtra::kable(mr_table)
 plot_mapping_rates(mapping_rates)
 \`\`\`
 
-## Identifier Types Used by File
+# Overlap Among Inputs
+
+\`\`\`{r,fig.height=7,warnings = FALSE, message = FALSE, fig.width = 12}
+suppressWarnings({
+  plot_mapping_overlap(mapping_library_long)
+})
+\`\`\`
+
+# Identifier Types Used by File
 \`\`\`{r, results = \'asis\'}
 write_id_rates(mapped_list_input_files,mapped_list_synonyms)
 \`\`\`
 
-## Chemical Class Breakdown by File
+# Chemical Class Breakdown by File
 \`\`\`{r,fig.height=7,warnings = FALSE, message = FALSE, fig.width = 12}
 suppressWarnings({
 plot_chemical_classes(mapped_list_input_files,mapped_list_synonyms)

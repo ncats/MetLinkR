@@ -193,22 +193,21 @@ harmonizeInputSheets <- function(inputcsv,
 
   mapping_library <- merge_files(mapped_input_list,myinputfiles)
   multimappings <- find_multimapped_metabolites(mapping_library,myinputfiles)
-
+  mapping_library_long <- pivot_mapping_library(mapping_library)
+  
   if(mapping_library_format=="wide"){
     xlsx::write.xlsx(as.data.frame(mapping_library),
                      file = paste0("metLinkR_output/mapping_library.xlsx"),
                      row.names=FALSE,sheetName="Mapping Library")
   }else if(mapping_library_format=="long"){
-    mapping_library <- pivot_mapping_library(mapping_library)
-    xlsx::write.xlsx(as.data.frame(mapping_library),
+    xlsx::write.xlsx(as.data.frame(mapping_library_long),
                      file = paste0("metLinkR_output/mapping_library.xlsx"),
                      row.names=FALSE,sheetName="Mapping Library")
   }else{
     xlsx::write.xlsx(as.data.frame(mapping_library),
                      file = paste0("metLinkR_output/mapping_library.xlsx"),
                      row.names=FALSE,sheetName="Mapping Library Wide")
-    mapping_library <- pivot_mapping_library(mapping_library)
-    xlsx::write.xlsx(as.data.frame(mapping_library),
+    xlsx::write.xlsx(as.data.frame(mapping_library_long),
                      file = paste0("metLinkR_output/mapping_library.xlsx"),
                      row.names=FALSE,sheetName="Mapping Library Long", append = TRUE)
   }
@@ -233,14 +232,15 @@ harmonizeInputSheets <- function(inputcsv,
                    append = TRUE,showNA=FALSE)
   ## Write text log
   write_txt_log(start_time,myinputfiles)
+
+  ## Write PDF report
+  browser()
   names(mapping_rates[[2]]) = names(mapped_list_input_files) =
     names(mapped_list_synonyms) = myinputfiles$ShortFileName
-  
-  ## Write PDF report
   write_html_report(mapping_rates,
                    mapped_list_input_files,
-                   mapped_list_synonyms)
-  
+                   mapped_list_synonyms,
+                   mapping_library_long)
 
   print("(5/5) Wrote output files to metLinkR_output/")
   return(mapping_library)
