@@ -59,6 +59,7 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
 }
 
 
+##' @title Query Ramp Synonyms
 ##' @param ids a string of metabolites separated by newline
 ##'
 ##' @return a dataframe of all RaMP synonyms found for inputs,
