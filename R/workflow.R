@@ -236,6 +236,7 @@ harmonizeInputSheets <- function(inputcsv,
   ## Write PDF report
   names(mapping_rates[[2]]) = names(mapped_list_input_files) =
     names(mapped_list_synonyms) = myinputfiles$ShortFileName
+  browser()
   write_html_report(mapping_rates,
                    mapped_list_input_files,
                    mapped_list_synonyms,

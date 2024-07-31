@@ -43,5 +43,4 @@ Query RefMet for standardized names. Code from Eoin Fahy, received on 5/8/2023
 \dontrun{
 queryResults <- queryRefMet(mets = "2'-Deoxyuridine")
 }
-
 }

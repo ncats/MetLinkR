@@ -81,6 +81,7 @@ write_txt_log <- function(start_time, myinputfiles) {
 plot_mapping_rates <- function(mapping_rates) {
   mapping_rates <- unlist(mapping_rates)
   names(mapping_rates)[1] <- "Global"
+  mapping_rates <- c(mapping_rates[1],sort(mapping_rates[-1],decreasing=TRUE))
   mapping_rates <- data.frame(mapping_rates)
   mapping_rates$dataset <- rownames(mapping_rates)
   mapping_rates$dataset <- factor(mapping_rates$dataset, levels = mapping_rates$dataset)
