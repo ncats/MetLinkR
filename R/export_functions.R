@@ -1,21 +1,23 @@
+#' @importFrom rlang .data
 pivot_mapping_library <- function(mappings) {
   out <- mappings %>%
     tidyr::pivot_longer(
-      cols = !`Harmonized name`,
+      cols = !.data$`Harmonized name`,
       names_to = c(".value", "Origin file"),
       names_sep = " \\(",
       values_drop_na = TRUE
     ) %>%
-    dplyr::filter(`Input name` != "-") %>%
-    dplyr::mutate(`Origin file` = gsub("\\)", "", `Origin file`))
+    dplyr::filter(.data$`Input name` != "-") %>%
+    dplyr::mutate(`Origin file` = gsub("\\)", "", .data$`Origin file`))
   return(out)
 }
 
+#' @importFrom rlang .data
 extract_missing_values <- function(appended_inputs, myinputfiles) {
   missed_mappings <- mapply(function(x, y) {
     y <- as.vector(y) %>% unlist
     names(y) <- colnames(myinputfiles)[-1]
-    rows <- x %>% dplyr::filter(is.na(`Standardized name`))
+    rows <- x %>% dplyr::filter(is.na(.data$`Standardized name`))
 
     identifiers <- c(y["HMDB"], y["PubChem_CID"], y["KEGG"], y["LIPIDMAPS"], y["chebi"], y["Metabolite_Name"])
     out <- lapply(identifiers, function(z) {
@@ -42,9 +44,10 @@ extract_missing_values <- function(appended_inputs, myinputfiles) {
   return(missed_mappings)
 }
 
+#' @importFrom rlang .data
 find_multimapped_metabolites <- function(mapping_library, myinputfiles) {
   inputs <- mapping_library %>%
-    dplyr::select(`Harmonized name`, dplyr::starts_with("Input name"))
+    dplyr::select(.data$`Harmonized name`, dplyr::starts_with("Input name"))
   out <- matrix(ncol = 3, nrow = 0)
   for (i in 2:ncol(inputs)) {
     if (any(duplicated(inputs[, i]))) {
@@ -78,6 +81,7 @@ write_txt_log <- function(start_time, myinputfiles) {
   sink.reset()
 }
 
+##' @importFrom rlang .data
 plot_mapping_rates <- function(mapping_rates) {
   mapping_rates <- unlist(mapping_rates)
   names(mapping_rates)[1] <- "Global"
@@ -88,8 +92,8 @@ plot_mapping_rates <- function(mapping_rates) {
   colors <- c("1", rep("2", times = nrow(mapping_rates) - 1))
   p <- ggplot2::ggplot(
     mapping_rates,
-    ggplot2::aes(x = dataset, y = mapping_rates, fill = colors)
-  ) +
+    ggplot2::aes(x = .data$dataset, y = .data$mapping_rates,
+                 fill = colors)) +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::scale_fill_manual(values = c("goldenrod", "grey40")) +
     ggplot2::theme_classic() +
@@ -99,20 +103,28 @@ plot_mapping_rates <- function(mapping_rates) {
   return(p)
 }
 
+##' @importFrom rlang .data
 plot_mapping_overlap <- function(mapping_library){
   listInput <- lapply(unique(mapping_library$`Origin file`), function(x){
-    mapping_library %>% dplyr::filter(`Origin file` == x) %>%
-      pull(`Harmonized name`)
+    mapping_library %>% dplyr::filter(.data$`Origin file` == x) %>%
+      dplyr::pull(.data$`Harmonized name`)
   })
   names(listInput) <- unique(mapping_library$`Origin file`)
   UpSetR::upset(UpSetR::fromList(listInput), order.by = "freq",nsets=10)
 }
 
+
+##' @title 
+##' @param mapped_list_input_files 
+##' @param mapped_list_synonyms
+##' @importFrom rlang .data
+##' @return 
+##' @author Patt
 plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
   mapped_list_input_files <- lapply(mapped_list_input_files, function(x){
     x %>%
-      dplyr::group_by(rownum) %>%
-      dplyr::filter(priority == min(priority)) %>%
+      dplyr::group_by(.data$rownum) %>%
+      dplyr::filter(.data$priority == min(.data$priority)) %>%
       as.data.frame
   })
   refmet_classes <- lapply(mapped_list_input_files, function(x) {
@@ -129,7 +141,7 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
     if (methods::is(x, "data.frame")) {
       temp <- x %>%
         dplyr::select("Standardized name", "Super class") %>%
-        dplyr::filter(`Standardized name` != "-") %>%
+        dplyr::filter(.data$`Standardized name` != "-") %>%
         unique %>%
         dplyr::pull("Super class")
     }
@@ -141,7 +153,7 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
 
   plot_list <- mapply(function(x, y) {
     class_table <- as.data.frame(table(x))
-    p <- ggplot2::ggplot(class_table, ggplot2::aes(x = x, y = Freq)) +
+    p <- ggplot2::ggplot(class_table, ggplot2::aes(x = .data$x, y = .data$Freq)) +
       ggplot2::geom_bar(stat = "identity") +
       ggplot2::theme_classic() +
       ggplot2::labs(x = "ClassyFire SuperClass", y = "Count") +
@@ -158,17 +170,21 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
   return(plot_list)
 }
 
-meta_plotting <- function(chemical_plots){
-  splitted_plots <- split(chemical_plots, ceiling(seq_along(chemical_plots)/3))
-  lapply(splitted_plots, function(x) cowplot::plot_grid(plotlist = x,ncol = 1))
-}
-
+##' .. content for \description{} (no empty lines) ..
+##'
+##' .. content for \details{} ..
+##' @title 
+##' @param mapped_list_input_files 
+##' @param mapped_list_synonyms
+##' @importFrom rlang .data
+##' @return 
+##' @author Patt
 write_id_rates <- function(mapped_list_input_files,
                            mapped_list_synonyms) {
   mapped_list_input_files <- lapply(mapped_list_input_files, function(x) {
     x %>%
-      dplyr::group_by(rownum) %>%
-      dplyr::filter(priority == min(priority)) %>%
+      dplyr::group_by(.data$rownum) %>%
+      dplyr::filter(.data$priority == min(.data$priority)) %>%
       as.data.frame
   })
   id_origins <- lapply(mapped_list_input_files, function(x) {
@@ -252,4 +268,11 @@ plot_chemical_classes(mapped_list_input_files,mapped_list_synonyms)
     #Delete file if it exists
     file.remove("metLinkR_output/metLinkR_report.Rmd")
   }
+}
+
+##' @importFrom rlang .data
+assemble_metadata <- function(mapped_input_list){
+  merged_list <- do.call(rbind, mapped_input_list) %>%
+    dplyr::select(-.data$rownum) %>%
+    unique
 }

@@ -4,12 +4,30 @@
 \alias{harmonizeInputSheets}
 \title{Run total harmonization of metabolites}
 \usage{
-harmonizeInputSheets(inputcsv, mapping_library_format = "both", n_cores = 1)
+harmonizeInputSheets(
+  inputcsv,
+  mapping_library_format = "both",
+  n_cores = 1,
+  use_ramp_synonyms = TRUE,
+  remove_parentheses_for_synonym_search = TRUE,
+  use_metabolon_parsers = TRUE,
+  majority_vote = TRUE
+)
 }
 \arguments{
 \item{inputcsv}{character of pathway to csv containing names of files with metabolite names}
 
 \item{mapping_library_format}{string, print library in "wide" format, "long" format, or "both"}
+
+\item{n_cores}{The number of cores available for parallel computation}
+
+\item{use_ramp_synonyms}{Query metabolites missed by RefMet in the RaMP database}
+
+\item{remove_parentheses_for_synonym_search}{Remove any parenthetical text before searching for synonyms in RaMP. May result in loss of structural specificity}
+
+\item{use_metabolon_parsers}{Strip special characters typical of metabolon inputs}
+
+\item{majority_vote}{When multiple IDs for a metabolite are provided and they produce different standardized names, choose the highest frequency output}
 }
 \value{
 a dataframe containing harmonized files across all input files listed in inputcsv

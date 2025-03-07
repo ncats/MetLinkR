@@ -17,6 +17,3 @@ Merged files
 \description{
 Merge Files
 }
-\author{
-Patt
-}

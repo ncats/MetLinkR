@@ -36,7 +36,8 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
                                 KEGG_col = NA,
                                 LM_col = NA, CHEBI_col = NA,
                                 metab_col,
-                                ramp_prefixes = FALSE) {
+                                ramp_prefixes = FALSE
+                                ) {
   id_vector <- c()
   temp_vector <- c()
   origin_vector <- c()
@@ -151,7 +152,7 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
 }
 
 ##' @title Mass Check
-##'
+##' @importFrom rlang .data
 ##' @param synonym_DF dataframe of synonyms
 ##'
 ##' @return dataframe with three possible values per rampId: species, class or invalid
@@ -159,7 +160,7 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
 massCheck <- function(synonym_DF) {
   ID_flags <- sapply(unique(synonym_DF$rampId), function(x){
     sliceDF <- synonym_DF %>%
-      dplyr::filter(rampId==x)
+      dplyr::filter(.data$rampId==x)
     if (length(unique(sliceDF$mol_formula)) == 1) {
       return(data.frame(x,"Species"))
     }else{
@@ -231,4 +232,66 @@ strip_prefixes <- function(id){
   return(gsub("hmdb:|kegg:|LIPIDMAPS:|pubchem:|CAS:","",id))
 }
 
+formatListAsString <- function(idList) {
+  output_list <- sapply(idList,shQuote)
+  output_list <- paste(output_list,collapse = ",")
+  return (output_list)
+}
 
+record_disagreements <- function(refmet_df){
+  disagreements <- refmet_df %>%
+    makeStereochemFlags %>%
+    dplyr::filter(.data$`Standardized name` != "-") %>%
+    dplyr::group_by(.data$rownum) %>%
+    dplyr::filter(dplyr::n_distinct(.data$`Standardized name`)>1) %>%
+    dplyr::mutate(input_group_label = dplyr::cur_group_id()) %>%
+    ## Put group label as first column
+    dplyr::mutate(all_isomers = ifelse(dplyr::n_distinct(.data$`Formula`)>1,
+                                       FALSE, TRUE)) %>%
+    as.data.frame %>%
+    dplyr::select(-c("priority", "rownum"))
+}
+
+filter_hits <- function(x, majority_vote){
+  if(majority_vote){
+    x <- x %>%
+      dplyr::mutate("Origin" = "Original input") %>%
+      dplyr::filter(.data$`Standardized name` != "-")
+
+    out <- x[0,]
+    for(i in unique(x$rownum)){
+      temp_df <- x %>%
+        dplyr::filter(.data$rownum==i)
+      if(nrow(temp_df)<3){
+        if(any(!is.na(temp_df$priority))){
+          out <- rbind(out,
+                       temp_df %>%
+                         dplyr::filter(.data$priority==min(.data$priority)))
+        }
+      }else{
+        freqs = sort(table(temp_df$`Standardized name`), decreasing = TRUE)
+        if(length(which(freqs==max(freqs)))==1){
+          consensus = names(which(freqs==max(freqs)))
+          temp_df = temp_df %>%
+            dplyr::filter(.data$`Standardized name` == consensus) %>%
+            dplyr::filter(.data$`priority` == min(.data$`priority`))
+          out <- rbind(out,
+                       temp_df)
+        }else{
+          out <- rbind(out,
+                       temp_df %>%
+                         dplyr::filter(.data$priority==min(temp_df$priority)))
+        }
+      }
+    }
+    return(out)
+  }else{
+    x %>%
+      dplyr::mutate("Origin" = "Original input") %>%
+      dplyr::filter(.data$`Standardized name` != "-") %>%
+      dplyr::group_by(.data$rownum) %>%
+      dplyr::filter(.data$priority == min(.data$priority)) %>%
+      as.data.frame() %>%
+      dplyr::select(-c(.data$priority))
+  }
+}

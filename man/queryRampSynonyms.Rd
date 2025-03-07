@@ -4,10 +4,14 @@
 \alias{queryRampSynonyms}
 \title{Query Ramp Synonyms}
 \usage{
-queryRampSynonyms(ids)
+queryRampSynonyms(ids, db = RaMP::RaMP(), use_metabolon_parsers = TRUE)
 }
 \arguments{
 \item{ids}{a string of metabolites separated by newline}
+
+\item{db}{connection to RaMP sqlite database}
+
+\item{use_metabolon_parsers}{Strip special characters typical of metabolon inputs}
 }
 \value{
 a dataframe of all RaMP synonyms found for inputs,
