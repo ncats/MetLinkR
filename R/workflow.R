@@ -51,7 +51,6 @@ harmonizeInputSheets <- function(inputcsv,
   ##########################################################################
   ## 2. Initial RefMet mappings                                           ##
   ##########################################################################
-  
   mapped_list_input_files <- foreach(i = 1:length(list_input_files)) %dopar% {
     metLinkR:::queryRefMet(
       input_df = list_input_files[[i]],
