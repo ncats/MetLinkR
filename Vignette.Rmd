@@ -77,6 +77,8 @@ The main exported function for metLinkR is `harmonizeInputSheets`, which takes f
 `harmonizeInputSheets` will keep you apprised of its progress as it runs, and provide some stats on the mapping rates to the console as well as run time. Don't worry about saving this information, it will also be present in the output files.
 
 ```{r}
+require("metLinkR")
+setwd(path.package("metLinkR"))
 n_cores <- parallel::detectCores() - 1
 
 metLinkR_output <- harmonizeInputSheets(inputcsv=system.file("extdata/HarmInputFiles.csv", package="metLinkR"),
