@@ -78,7 +78,7 @@ The main exported function for metLinkR is `harmonizeInputSheets`, which takes f
 
 ```{r}
 require("metLinkR")
-setwd(path.package("metLinkR"))
+setwd(paste0(path.package("metLinkR"),"/extdata"))
 n_cores <- parallel::detectCores() - 1
 
 metLinkR_output <- harmonizeInputSheets(inputcsv=system.file("extdata/HarmInputFiles.csv", package="metLinkR"),
