@@ -42,7 +42,7 @@ The manuscript for metLinkR is currently in preparation.
 
 # Vignette
 
-See our vignette [here](https://github.com/ncats/MetLinkR/blob/gh-pages/Vignette.Rmd). MetLinkR is a relatively simple package to use with only one exported function. The vignette explains how to format your inputs and provides an overview of the outputs expected from a metLinkR analysis.
+See our vignette [here](https://ncats.github.io/MetLinkR/). MetLinkR is a relatively simple package to use with only one exported function. The vignette explains how to format your inputs and provides an overview of the outputs expected from a metLinkR analysis.
 
 # Contact
 
