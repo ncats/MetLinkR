@@ -10,7 +10,6 @@ Imports:
   dplyr,
   tidyr,
   httr,
-  RaMP,
   doParallel,
   crayon,
   xlsx,
