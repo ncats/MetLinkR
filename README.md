@@ -38,7 +38,7 @@ devtools::install_github("ncats/MetLinkR")
 
 # Citation
 
-The manuscript for metLinkR is currently in preparation. 
+[See our publication in the Journal of Proteome Research](https://pmc.ncbi.nlm.nih.gov/articles/PMC12053952/)
 
 # Vignette
 
