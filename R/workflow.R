@@ -27,7 +27,9 @@ harmonizeInputSheets <- function(inputcsv,
                                  use_ramp_synonyms = TRUE,
                                  remove_parentheses_for_synonym_search = TRUE,
                                  use_metabolon_parsers = TRUE,
-                                 majority_vote = TRUE) {
+                                 majority_vote = TRUE,
+                                 direct_input = FALSE,
+                                 file_list = NA) {
   start_time <- Sys.time()
   cluster <- parallel::makeCluster(n_cores)
   doParallel::registerDoParallel(cluster)
@@ -38,16 +40,35 @@ harmonizeInputSheets <- function(inputcsv,
   ##########################################################################
   ## 1. Read in input files. Output a list of dataframes                  ##
   ##########################################################################
-  myinputfiles <- utils::read.csv(inputcsv, header = T)
-  list_input_files <- readInputCSVs(inputcsv)
-  myinputfiles_list <- as.list(data.frame(t(myinputfiles)))
-  myinputfiles_list <- lapply(myinputfiles_list, function(x) {
-    out <- t(data.frame(x))
-    colnames(out) <- colnames(myinputfiles)
-    return(as.data.frame(out))
-  })
+
+  if(!direct_input){
+    myinputfiles <- utils::read.csv(inputcsv, header = T)
+    myinputfiles_list <- as.list(data.frame(t(myinputfiles)))
+    myinputfiles_list <- lapply(myinputfiles_list, function(x) {
+      out <- t(data.frame(x))
+      colnames(out) <- colnames(myinputfiles)
+      return(as.data.frame(out))
+    })
+    list_input_files <- readInputCSVs(inputcsv)
+  }else{
+    myinputfiles <- inputcsv
+    myinputfiles <- read.table(text = unlist(myinputfiles), sep =",", header = TRUE, stringsAsFactors = FALSE)
+    myinputfiles_list <- as.list(data.frame(t(myinputfiles)))
+    myinputfiles_list <- lapply(myinputfiles_list, function(x) {
+      out <- t(data.frame(x))
+      colnames(out) <- colnames(myinputfiles)
+      return(as.data.frame(out))
+    })
+    list_input_files <- lapply(file_list, function(x){
+      return(read.table(text = x, sep =",", header = TRUE, stringsAsFactors = FALSE))
+    })
+  }
+
+  print(class(list_input_files[[1]]))
+  print(dim(list_input_files[[1]]))
+  print(list_input_files[[1]])
   message("(1/5) Imported files")
- 
+  
   ##########################################################################
   ## 2. Initial RefMet mappings                                           ##
   ##########################################################################
@@ -63,7 +84,7 @@ harmonizeInputSheets <- function(inputcsv,
       CHEBI_col = myinputfiles_list[[i]]$chebi
     )
   }
-
+  
   initial_disagreements<-lapply(mapped_list_input_files,record_disagreements)
 
   refmet_mapped_ids <- lapply(mapped_list_input_files, filter_hits,
