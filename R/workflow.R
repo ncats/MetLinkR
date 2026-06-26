@@ -367,6 +367,6 @@ harmonizeInputSheets <- function(inputcsv,
                    mapped_input_list,
                    mapping_library_long)
 
-  print("(5/5) Wrote output files to metLinkR_output/")
-  return(mapping_library)
+  message("(5/5) Wrote output files to metLinkR_output/")
+  invisible(mapping_library)
 }
