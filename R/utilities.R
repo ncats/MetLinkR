@@ -38,6 +38,21 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
                                 metab_col,
                                 ramp_prefixes = FALSE
                                 ) {
+  get_scalar_cell <- function(df, row_idx, col_name) {
+    if (is.na(col_name) || !(col_name %in% colnames(df))) {
+      return(NA_character_)
+    }
+    values <- df[[col_name]]
+    if (is.data.frame(values)) {
+      values <- values[[1]]
+    }
+    value <- values[[row_idx]]
+    if (length(value) == 0 || is.na(value)) {
+      return(NA_character_)
+    }
+    as.character(value[[1]])
+  }
+
   id_vector <- c()
   temp_vector <- c()
   origin_vector <- c()
@@ -46,77 +61,82 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
   for (x in 1:nrow(input_df)) {
     if (ramp_prefixes) {
       if (!is.na(HMDB_col)) {
-        if(is.na(input_df[x, HMDB_col])){
+        hmdb_value <- get_scalar_cell(input_df, x, HMDB_col)
+        if(is.na(hmdb_value)){
           temp_vector <- c(temp_vector,NA)
           origin_vector <- c(origin_vector,NA)
         }else{
-          temp_vector <- c(temp_vector, paste0("hmdb:", input_df[x, HMDB_col]))
+          temp_vector <- c(temp_vector, paste0("hmdb:", hmdb_value))
           origin_vector <- c(origin_vector, "hmdb")
         }
       }
       if (!is.na(KEGG_col)) {
-        if(is.na(input_df[x, KEGG_col])){
+        kegg_value <- get_scalar_cell(input_df, x, KEGG_col)
+        if(is.na(kegg_value)){
           temp_vector <- c(temp_vector,NA)
           origin_vector <- c(origin_vector,NA)
         }else{
-          temp_vector <- c(temp_vector, paste0("kegg:", input_df[x, KEGG_col]))
+          temp_vector <- c(temp_vector, paste0("kegg:", kegg_value))
           origin_vector <- c(origin_vector, "kegg")
         }
       }
       if (!is.na(LM_col)) {
-        if(is.na(input_df[x, LM_col])){
+        lm_value <- get_scalar_cell(input_df, x, LM_col)
+        if(is.na(lm_value)){
           temp_vector <- c(temp_vector,NA)
           origin_vector <- c(origin_vector,NA)
         }else{
-          temp_vector <- c(temp_vector, paste0("LIPIDMAPS:", input_df[x, LM_col]))
+          temp_vector <- c(temp_vector, paste0("LIPIDMAPS:", lm_value))
           origin_vector <- c(origin_vector, "LIPIDMAPS")
         }
       }
       if (!is.na(CHEBI_col)) {
-        if(is.na(input_df[x, CHEBI_col])){
+        chebi_value <- get_scalar_cell(input_df, x, CHEBI_col)
+        if(is.na(chebi_value)){
           temp_vector <- c(temp_vector,NA)
           origin_vector <- c(origin_vector,NA)
         }else{
-          temp_vector <- c(temp_vector, paste0("chebi:", input_df[x, CHEBI_col]))
+          temp_vector <- c(temp_vector, paste0("chebi:", chebi_value))
           origin_vector <- c(origin_vector, "chebi")
         }
       }
       if (!is.na(metab_col)) {
-        temp_vector <- c(temp_vector, input_df[x, metab_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, metab_col))
         origin_vector <- c(origin_vector, "common name")
       }
       if (!is.na(CID_col)) {
-        if(is.na(input_df[x, CID_col])){
+        cid_value <- get_scalar_cell(input_df, x, CID_col)
+        if(is.na(cid_value)){
           temp_vector <- c(temp_vector,NA)
           origin_vector <- c(origin_vector,NA)
         }else{
-          temp_vector <- c(temp_vector, paste0("CAS:", input_df[x, CID_col]))
+          temp_vector <- c(temp_vector, paste0("CAS:", cid_value))
           origin_vector <- c(origin_vector,"CAS")
         }
       }
     } else {
       if (!is.na(HMDB_col)) {
-        temp_vector <- c(temp_vector, input_df[x, HMDB_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, HMDB_col))
         origin_vector <- c(origin_vector, "hmdb")
       }
       if (!is.na(KEGG_col)) {
-        temp_vector <- c(temp_vector, input_df[x, KEGG_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, KEGG_col))
         origin_vector <- c(origin_vector, "kegg")
       }
       if (!is.na(LM_col)) {
-        temp_vector <- c(temp_vector, input_df[x, LM_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, LM_col))
         origin_vector <- c(origin_vector, "LIPIDMAPS")
       }
       if (!is.na(CHEBI_col)) {
-        temp_vector <- c(temp_vector, input_df[x, CHEBI_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, CHEBI_col))
         origin_vector <- c(origin_vector, "chebi")
       }
       if (!is.na(metab_col)) {
-        temp_vector <- c(temp_vector, input_df[x, metab_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, metab_col))
         origin_vector <- c(origin_vector, "common name")
       }
       if (!is.na(CID_col)) {
-        temp_vector <- c(temp_vector, input_df[x, CID_col])
+        temp_vector <- c(temp_vector, get_scalar_cell(input_df, x, CID_col))
         origin_vector <- c(origin_vector, "CAS")
       }
     }
@@ -134,11 +154,25 @@ extract_identifiers <- function(input_df, HMDB_col, CID_col,
         }
       }
     }else{
-      if(any(grepl(";",temp_vector))){
-        multi_index <- which(grepl(";",temp_vector))
-        origin_vector <- append(origin_vector, origin_vector[multi_index],
-                                after = multi_index)
-        temp_vector <- unlist(strsplit(temp_vector,";"))
+      keep_idx <- !(is.na(temp_vector) | temp_vector == "")
+      temp_vector <- temp_vector[keep_idx]
+      origin_vector <- origin_vector[keep_idx]
+      if (length(temp_vector) == 0) {
+        next
+      }
+      if(any(grepl(";",temp_vector, fixed = TRUE))){
+        split_temp <- strsplit(temp_vector, ";", fixed = TRUE)
+        temp_vector <- unlist(split_temp, use.names = FALSE)
+        origin_vector <- unlist(
+          mapply(rep, origin_vector, lengths(split_temp), SIMPLIFY = FALSE),
+          use.names = FALSE
+        )
+      }
+      keep_idx <- !(is.na(temp_vector) | temp_vector == "")
+      temp_vector <- temp_vector[keep_idx]
+      origin_vector <- origin_vector[keep_idx]
+      if (length(temp_vector) == 0) {
+        next
       }
       temp_df <- data.frame(x, temp_vector,1:length(temp_vector),origin_vector)
       id_df <- rbind(id_df,
@@ -194,14 +228,14 @@ massCheck <- function(synonym_DF) {
 ##' @author Andrew Patt
 calculate_mapping_rates <- function(mapped_input_list, list_input_files,
                                     myinputfiles){
-  mapping_rates = mapply(function(x,y) length(unique(x$`Input name`))/nrow(y),
+  mapping_rates = mapply(function(x,y) length(unique(stats::na.omit(x$rownum)))/nrow(y),
                          x = mapped_input_list,
                          y = list_input_files,
                          SIMPLIFY = FALSE)
   global_mapping_rate =
     sum(sapply(mapped_input_list,
                function(x)
-                 return(length(unique(x$`Input name`)))))/
+                 return(length(unique(stats::na.omit(x$rownum))))))/
     sum(sapply(list_input_files, function(x)
       return(nrow(x))))
 

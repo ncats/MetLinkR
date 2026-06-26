@@ -48,6 +48,7 @@ append_standard_names <- function(mapped_input_list, list_input_files){
     y <- y %>%
       dplyr::mutate("rownum" = 1:nrow(y))
     x <- x %>%
+      dplyr::distinct(.data$rownum, .keep_all = TRUE) %>%
       dplyr::select(c(.data$`Standardized name`,.data$`rownum`))
     out <- y %>%
       dplyr::left_join(x,by="rownum") %>%

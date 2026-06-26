@@ -105,12 +105,60 @@ plot_mapping_rates <- function(mapping_rates) {
 
 ##' @importFrom rlang .data
 plot_mapping_overlap <- function(mapping_library){
+  if (is.null(mapping_library) || nrow(mapping_library) == 0) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::theme_void() +
+        ggplot2::annotate(
+          "text",
+          x = 1,
+          y = 1,
+          label = "No mapped metabolite overlap data available"
+        )
+    )
+  }
+
   listInput <- lapply(unique(mapping_library$`Origin file`), function(x){
     mapping_library %>% dplyr::filter(.data$`Origin file` == x) %>%
       dplyr::pull(.data$`Harmonized name`)
   })
   names(listInput) <- unique(mapping_library$`Origin file`)
-  UpSetR::upset(UpSetR::fromList(listInput), order.by = "freq",nsets=10)
+  listInput <- lapply(listInput, function(x) unique(stats::na.omit(x)))
+  listInput <- listInput[lengths(listInput) > 0]
+
+  if (length(listInput) == 0) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::theme_void() +
+        ggplot2::annotate(
+          "text",
+          x = 1,
+          y = 1,
+          label = "No mapped metabolite overlap data available"
+        )
+    )
+  }
+
+  overlap_matrix <- UpSetR::fromList(listInput)
+  overlap_dims <- dim(overlap_matrix)
+  if (is.null(overlap_matrix) ||
+      is.null(overlap_dims) ||
+      length(overlap_dims) < 2 ||
+      is.na(overlap_dims[2]) ||
+      overlap_dims[2] == 0) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::theme_void() +
+        ggplot2::annotate(
+          "text",
+          x = 1,
+          y = 1,
+          label = "No mapped metabolite overlap data available"
+        )
+    )
+  }
+
+  UpSetR::upset(overlap_matrix, order.by = "freq", nsets = min(10, length(listInput)))
 }
 
 
@@ -120,36 +168,18 @@ plot_mapping_overlap <- function(mapping_library){
 ##' @importFrom rlang .data
 ##' @return 
 ##' @author Patt
-plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
-  mapped_list_input_files <- lapply(mapped_list_input_files, function(x){
+plot_chemical_classes <- function(mapped_input_list){
+  class_vectors <- lapply(mapped_input_list, function(x) {
+    if (!is.data.frame(x) || nrow(x) == 0) {
+      return(character(0))
+    }
     x %>%
-      dplyr::group_by(.data$rownum) %>%
-      dplyr::filter(.data$priority == min(.data$priority)) %>%
-      as.data.frame
+      dplyr::filter(!is.na(.data$`Super class`)) %>%
+      dplyr::filter(.data$`Super class` != "-") %>%
+      dplyr::filter(.data$`Super class` != "") %>%
+      dplyr::distinct(.data$rownum, .keep_all = TRUE) %>%
+      dplyr::pull(.data$`Super class`)
   })
-  refmet_classes <- lapply(mapped_list_input_files, function(x) {
-    out <- x$`Super class`[which(!is.na(x$`Super class`))]
-    if(any(out=="-")){
-      out <- out[-which(out=="-")]
-    }
-    if(any(out=="")){
-      out <- out[-which(out=="")]
-    }
-    return(out)
-  })
-  synonym_classes <- lapply(mapped_list_synonyms, function(x) {
-    if (methods::is(x, "data.frame")) {
-      temp <- x %>%
-        dplyr::select("Standardized name", "Super class") %>%
-        dplyr::filter(.data$`Standardized name` != "-") %>%
-        unique %>%
-        dplyr::pull("Super class")
-    }
-  })
-
-  classes <- mapply(function(x, y) {
-    return(c(x, y))
-  }, x = refmet_classes, y = synonym_classes)
 
   plot_list <- mapply(function(x, y) {
     class_table <- as.data.frame(table(x))
@@ -164,8 +194,8 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
       )
     return(p)
   },
-  x = classes,
-  y = names(classes),
+  x = class_vectors,
+  y = names(class_vectors),
   SIMPLIFY = FALSE)
   return(plot_list)
 }
@@ -179,27 +209,16 @@ plot_chemical_classes <- function(mapped_list_input_files,mapped_list_synonyms){
 ##' @importFrom rlang .data
 ##' @return 
 ##' @author Patt
-write_id_rates <- function(mapped_list_input_files,
-                           mapped_list_synonyms) {
-  mapped_list_input_files <- lapply(mapped_list_input_files, function(x) {
-    x %>%
-      dplyr::group_by(.data$rownum) %>%
-      dplyr::filter(.data$priority == min(.data$priority)) %>%
-      as.data.frame
-  })
-  id_origins <- lapply(mapped_list_input_files, function(x) {
-    return(x$origin[which(!is.na(x$origin))])
-  })
-  id_origins <- mapply(function(x, y) {
-    if (methods::is(y, "data.frame")) {
-      out <- c(x, rep("RaMP", times = length(unique(
-        y$`Standardized name`
-      )) - 1))
-      return(out)
-    } else{
-      return(x)
+write_id_rates <- function(mapped_input_list) {
+  id_origins <- lapply(mapped_input_list, function(x) {
+    if (!is.data.frame(x) || nrow(x) == 0) {
+      return(character(0))
     }
-  }, x = id_origins, y = mapped_list_synonyms)
+    x <- x %>%
+      dplyr::distinct(.data$rownum, .keep_all = TRUE)
+    out <- ifelse(x$Origin == "Synonym", "RaMP synonym", x$origin)
+    out[!is.na(out) & out != ""]
+  })
   table_list <- lapply(id_origins, function(x) {
     temp <- table(x)
     return(kableExtra::kable(temp, col.names = c("Identifier Type", "Count")))
@@ -209,8 +228,7 @@ write_id_rates <- function(mapped_list_input_files,
 
   
 write_html_report <- function(mapping_rates,
-                             mapped_list_input_files,
-                             mapped_list_synonyms,
+                             mapped_input_list,
                              mapping_library_long){
   cat("---
 title: \"MetLinkR Report\"
@@ -250,13 +268,13 @@ suppressWarnings({
 
 # Identifier Types Used by File
 \`\`\`{r, results = \'asis\'}
-write_id_rates(mapped_list_input_files,mapped_list_synonyms)
+write_id_rates(mapped_input_list)
 \`\`\`
 
 # Chemical Class Breakdown by File
 \`\`\`{r,fig.height=7,warnings = FALSE, message = FALSE, fig.width = 12}
 suppressWarnings({
-plot_chemical_classes(mapped_list_input_files,mapped_list_synonyms)
+plot_chemical_classes(mapped_input_list)
 })
 \`\`\`
 
