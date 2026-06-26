@@ -582,7 +582,7 @@ outputs</a></li>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 <p>This vignette showcases the functionality of the metLinkR R package,
-the code for which can be found at <a href="https://github.com/ncats/metLinkR">our github site</a>.</p>
+the code for which can be found at <a href="https://github.com/andyptt21/metLinkR">our github site</a>.</p>
 <p>MetLinkR is a package designed to harmonize and align metabolite
 identifiers across multiple input studies. Outputs are arranged to
 provide a number of ways to explore alignment results that will meet the
@@ -605,11 +605,10 @@ by a typical metLinkR run.</p>
 <code>parallel</code> and <code>doParallel</code> packages, but requires
 that the user supply the number of cores that can be reserved for the
 task. This can be done with the <code>detectCores()</code> function:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">require</span>(parallel)</span></code></pre></div>
-<pre><code>## Loading required package: parallel</code></pre>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>available_cores <span class="ot">&lt;-</span> parallel<span class="sc">::</span><span class="fu">detectCores</span>()</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="do">## For maximum speed, we reserve all cores minus one, so the machine can still perform some background tasks</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>n_cores <span class="ot">&lt;-</span> available_cores <span class="sc">-</span> <span class="dv">1</span></span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">require</span>(parallel)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>available_cores <span class="ot">&lt;-</span> parallel<span class="sc">::</span><span class="fu">detectCores</span>()</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="do">## For maximum speed, we reserve all cores minus one, so the machine can still perform some background tasks</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>n_cores <span class="ot">&lt;-</span> available_cores <span class="sc">-</span> <span class="dv">1</span></span></code></pre></div>
 </div>
 <div id="organizing-inputs-and-building-identifier-manifest" class="section level2">
 <h2>Organizing inputs and building identifier manifest</h2>
@@ -756,17 +755,16 @@ LIPIDMAPS &gt; Chebi &gt; Common Name &gt; PubChem</li>
 progress as it runs, and provide some stats on the mapping rates to the
 console as well as run time. Don’t worry about saving this information,
 it will also be present in the output files.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">require</span>(<span class="st">&quot;metLinkR&quot;</span>)</span></code></pre></div>
-<pre><code>## Loading required package: metLinkR</code></pre>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">setwd</span>(<span class="fu">paste0</span>(<span class="fu">path.package</span>(<span class="st">&quot;metLinkR&quot;</span>),<span class="st">&quot;/extdata&quot;</span>))</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>n_cores <span class="ot">&lt;-</span> parallel<span class="sc">::</span><span class="fu">detectCores</span>() <span class="sc">-</span> <span class="dv">1</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>metLinkR_output <span class="ot">&lt;-</span> <span class="fu">harmonizeInputSheets</span>(<span class="at">inputcsv=</span><span class="fu">system.file</span>(<span class="st">&quot;extdata/HarmInputFiles.csv&quot;</span>, <span class="at">package=</span><span class="st">&quot;metLinkR&quot;</span>),</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                                        <span class="at">n_cores =</span> n_cores,</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                                        <span class="at">mapping_library_format=</span><span class="st">&quot;both&quot;</span>,</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                                        <span class="at">remove_parentheses_for_synonym_search =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>                                        <span class="at">use_metabolon_parsers =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>                                        <span class="at">majority_vote =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">require</span>(<span class="st">&quot;metLinkR&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">setwd</span>(<span class="fu">paste0</span>(<span class="fu">path.package</span>(<span class="st">&quot;metLinkR&quot;</span>),<span class="st">&quot;/extdata&quot;</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>n_cores <span class="ot">&lt;-</span> parallel<span class="sc">::</span><span class="fu">detectCores</span>() <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>metLinkR_output <span class="ot">&lt;-</span> <span class="fu">harmonizeInputSheets</span>(<span class="at">inputcsv=</span><span class="fu">system.file</span>(<span class="st">&quot;extdata/HarmInputFiles.csv&quot;</span>, <span class="at">package=</span><span class="st">&quot;metLinkR&quot;</span>),</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>                                        <span class="at">n_cores =</span> n_cores,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>                                        <span class="at">mapping_library_format=</span><span class="st">&quot;both&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>                                        <span class="at">remove_parentheses_for_synonym_search =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>                                        <span class="at">use_metabolon_parsers =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>                                        <span class="at">majority_vote =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <pre><code>## [1] &quot;data.frame&quot;
 ## [1] 611   9
 ##                           metabid                                       metabolite_name          SUPER_PATHWAY
@@ -2637,7 +2635,7 @@ it will also be present in the output files.</p>
 ## 10/11 [unnamed-chunk-9]</code></pre>
 <pre><code>## 11/11</code></pre>
 <pre><code>## output file: metLinkR_report.knit.md</code></pre>
-<pre><code>## /opt/homebrew/bin/pandoc +RTS -K512m -RTS metLinkR_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output metLinkR_report.html --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/latex-div.lua --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/table-classes.lua --embed-resources --standalone --variable bs3=TRUE --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmd/h/default.html --syntax-highlighting tango --number-sections --variable theme=cerulean --mathjax --variable &#39;mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML&#39; --include-in-header /var/folders/7z/x3znsmd13nj_ky3wsbt3_sw4zzmgyq/T//RtmpHG51kF/rmarkdown-strfdc322054601.html</code></pre>
+<pre><code>## /opt/homebrew/bin/pandoc +RTS -K512m -RTS metLinkR_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output metLinkR_report.html --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/latex-div.lua --lua-filter /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmarkdown/lua/table-classes.lua --embed-resources --standalone --variable bs3=TRUE --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Users/pattac/Library/R/arm64/4.6/library/rmarkdown/rmd/h/default.html --syntax-highlighting tango --number-sections --variable theme=cerulean --mathjax --variable &#39;mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML&#39; --include-in-header /var/folders/7z/x3znsmd13nj_ky3wsbt3_sw4zzmgyq/T//RtmpHG51kF/rmarkdown-strfdc325ef2be.html</code></pre>
 <pre><code>## 
 ## Output created: metLinkR_report.html</code></pre>
 <pre><code>## [1] &quot;(5/5) Wrote output files to metLinkR_output/&quot;</code></pre>
@@ -2671,7 +2669,7 @@ contact the author directly at <a href="mailto:andrew.patt@nih.gov" class="email
 </div>
 <div id="session-info" class="section level1">
 <h1>Session Info</h1>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div>
 <pre><code>## R version 4.6.0 (2026-04-24)
 ## Platform: aarch64-apple-darwin23
 ## Running under: macOS Tahoe 26.5.1
