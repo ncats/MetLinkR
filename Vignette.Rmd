@@ -36,9 +36,9 @@ available_cores <- parallel::detectCores()
 n_cores <- available_cores - 1
 ```
 
-## Building identifier manifest
+## Organizing inputs and building identifier manifest
 
-Next we need to build a csv manifest to describe the metadata provided for our metabolite entities in our inputs. The example manifest for this vignette is as follows:
+Next we need to organize the input data files and build a csv manifest to describe the metadata provided for our metabolite entities in our inputs. The example manifest for this vignette is as follows:
 
 | FileNames                                                  | ShortFileName  | HMDB    | Metabolite_Name  | PubChem_CID | KEGG | LIPIDMAPS | chebi |
 |------------------------------------------------------------|----------------|---------|------------------|-------------|------|-----------|-------|
@@ -48,7 +48,7 @@ Next we need to build a csv manifest to describe the metadata provided for our m
 | example_data/CSVModifiedBroadfilefromVicky20182019.csv     | broadfileVicky | HMDB_ID | Metabolite       | COMP_ID     | NA   | NA        | NA    |
 | example_data/Broad_2022Aug_annotations.csv                 | broadfileEwy   | hmdbId  | name             | pubChemId   | NA   | NA        | NA    |
 
-1. The first column, "FileNames" provides the pathname for each of the five supplied input datasets.
+1. The first column, "FileNames" provides the pathname for each of the five supplied input datasets. All input data files should be stored in the directory indicated in their pathname - in this example, the "example_data" directory. 
 2. The second, "ShortFileName", is an arbitrary nickname provided by the user that will be used for graphics and other outputs.
 3. The remaining six columns correspond to the different identifier types accepted by MetLinkR. These include common name, HMDB ID, PubChem ID, KEGG ID, LIPIDMAPS ID, and Chebi ID. The entries in these rows are the column name relating to that identifier type in the supplied file. Note that NAs are acceptable if that identifier type is not present in a particular input. Further note that there are no restrictions in terms of which identifiers must be supplied; an identifier type does not need to be present across all input files for it to be incorporated into the mappings.
 
