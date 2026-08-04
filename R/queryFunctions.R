@@ -18,8 +18,17 @@
 queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
                         LM_col = NA, CHEBI_col = NA,
                         metab_col,synonym_search=FALSE) {
-  if(length(input_df)==1){
+  if (length(input_df) == 1 || !is.data.frame(input_df) || nrow(input_df) == 0) {
     return(NA)
+  }
+  if (!is.na(metab_col)) {
+    if (!(metab_col %in% colnames(input_df))) {
+      return(NA)
+    }
+    input_df <- input_df[!is.na(input_df[[metab_col]]) & nzchar(input_df[[metab_col]]), , drop = FALSE]
+    if (nrow(input_df) == 0) {
+      return(NA)
+    }
   }
   input_df <- input_df %>% replaceEmptys()
   id_df <- extract_identifiers(
@@ -34,15 +43,11 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
   if(synonym_search){
     id_vector = unique(id_vector)
   }
-  ## 5000 is the maximum query length recommended by Eoin Fahy
-  if(length(id_vector) > 5000){
-    x <- seq_along(id_vector)
-    id_vector_list <- split(id_vector, ceiling(x/5000))
-    df_list <- lapply(id_vector_list, send_id_vector_to_RefMet)
-    df <- do.call(rbind,df_list)
-  }else{
-    df <- send_id_vector_to_RefMet(id_vector)
-  }
+  refmet_batch_size <- 500
+  x <- seq_along(id_vector)
+  id_vector_list <- split(id_vector, ceiling(x / refmet_batch_size))
+  df_list <- lapply(id_vector_list, send_id_vector_to_RefMet)
+  df <- do.call(rbind, df_list)
   
   df1 <- df[rowSums(is.na(df)) != ncol(df), ]
   colnames(df1) <- df1[1, ]
@@ -59,11 +64,24 @@ queryRefMet <- function(input_df, filename, HMDB_col, CID_col, KEGG_col = NA,
 ##' @author Patt
 send_id_vector_to_RefMet <- function(id_vector){
   id_vector <- paste0(id_vector, collapse = "\n")
-  res <- httr::RETRY("POST", "https://www.metabolomicsworkbench.org/databases/refmet/name_to_refmet_new_min.php",
-                     body = list(metabolite_name = id_vector),
-                     encode = "form",
-                     times = 10
-                     )
+  res <- httr::RETRY(
+    "POST",
+    "https://www.metabolomicsworkbench.org/databases/refmet/name_to_refmet_new_min.php",
+    body = list(metabolite_name = id_vector),
+    encode = "form",
+    times = 10,
+    terminate_on = c(400, 401, 403, 404),
+    httr::timeout(60)
+  )
+  if (httr::http_error(res)) {
+    stop(
+      sprintf(
+        "RefMet request failed with HTTP status %s",
+        httr::status_code(res)
+      ),
+      call. = FALSE
+    )
+  }
   x <- httr::content(res)
   y <- strsplit(x, "\n")
   df <- data.frame(ncol = 7)
@@ -136,7 +154,7 @@ queryRampSynonyms <- function(ids, db = RaMP::RaMP(), use_metabolon_parsers = TR
     ##   checkValid_ids <- t(checkValid_ids) %>% as.data.frame
     ## }
 
-    resRampIdStr <- sapply(resRampId,shQuote)
+    resRampIdStr <- sapply(unique(resRampId$rampId), shQuote)
     resRampIdStr <- paste(resRampIdStr,collapse = ",")
     querywRamp <- paste0(
       "SELECT DISTINCT rampId, Synonym FROM
@@ -153,19 +171,21 @@ queryRampSynonyms <- function(ids, db = RaMP::RaMP(), use_metabolon_parsers = TR
 
   ## Have to re-map original inputs to Synonyms
   if(length(nrow(dbID_synonyms))!=0){
-    input_vector <- c()
-    for(i in 1:nrow(dbID_synonyms)){
-      if(grepl(dbID_synonyms$sourceId[i],list_ids)){
-        input_vector <- c(input_vector,dbID_synonyms$sourceId[i])
-      }else{
-        input_vector <- c(input_vector,dbID_synonyms$commonName[i])
-      }
-  }
     dbID_synonyms <- dbID_synonyms %>%
-      dplyr::mutate(Input = input_vector) %>%
+      dplyr::mutate(
+        Input = dplyr::if_else(
+          !is.na(.data$sourceId) & .data$sourceId != "" &
+            .data$sourceId %in% ids,
+          .data$sourceId,
+          .data$commonName,
+          missing = .data$commonName
+        )
+      ) %>%
       dplyr::select(.data$`Synonym`,
                     ##`classFlag`,
                     .data$`Input`) %>%
+      dplyr::filter(!is.na(.data$`Synonym`) & !is.na(.data$`Input`)) %>%
+      dplyr::filter(.data$`Synonym` != "" & .data$`Input` != "") %>%
       dplyr::distinct()
     return(dbID_synonyms)
   }else{

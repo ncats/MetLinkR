@@ -64,9 +64,6 @@ harmonizeInputSheets <- function(inputcsv,
     })
   }
 
-  print(class(list_input_files[[1]]))
-  print(dim(list_input_files[[1]]))
-  print(list_input_files[[1]])
   message("(1/5) Imported files")
   
   ##########################################################################
@@ -121,22 +118,67 @@ harmonizeInputSheets <- function(inputcsv,
     }
   }, x = refmet_unmapped_ids, y = myinputfiles_list, SIMPLIFY = FALSE)
 
-  parallel::clusterEvalQ(cluster,db <<- RaMP::RaMP())
-  synonym_table_list <- parallel::parLapply(cl=cluster,missed_ids, queryRampSynonyms)
+  if(use_ramp_synonyms){
+    db <- RaMP::RaMP()
+    synonym_table_list <- lapply(
+      missed_ids,
+      queryRampSynonyms,
+      db = db,
+      use_metabolon_parsers = use_metabolon_parsers
+    )
 
-  if(remove_parentheses_for_synonym_search){
-    synonym_table_list <- deparen_names(refmet_unmapped_ids, myinputfiles_list,
-                                        synonym_table_list)
+    if(remove_parentheses_for_synonym_search){
+      synonym_table_list <- deparen_names(refmet_unmapped_ids, myinputfiles_list,
+                                          synonym_table_list)
+    }
+  }else{
+    synonym_table_list <- replicate(length(list_input_files), NA, simplify = FALSE)
   }
   
-  message("(3/5) Found RaMP synonyms for unmapped inputs")
+  if(use_ramp_synonyms){
+    message("(3/5) Found RaMP synonyms for unmapped inputs")
+  }else{
+    message("(3/5) Skipped RaMP synonym search")
+  }
 
   ##########################################################################
   ## 4. Re-Query RefMet with synonym table                                ##
   ##########################################################################
-    mapped_list_synonyms <- foreach(i = 1:length(list_input_files)) %dopar% {
-      metLinkR:::queryRefMet(
-        input_df = synonym_table_list[[i]],
+    mapped_list_synonyms <- lapply(seq_along(list_input_files), function(i) {
+      synonym_input <- synonym_table_list[[i]]
+      if (!is.data.frame(synonym_input) || nrow(synonym_input) == 0 ||
+          !("Synonym" %in% colnames(synonym_input))) {
+        return(NA)
+      }
+
+      scalarize_col <- function(x) {
+        vapply(x, function(value) {
+          if (length(value) == 0 || all(is.na(value))) {
+            return(NA_character_)
+          }
+          as.character(value[[1]])
+        }, character(1))
+      }
+
+      synonym_input <- data.frame(
+        Synonym = scalarize_col(as.list(synonym_input$Synonym)),
+        Input = if ("Input" %in% colnames(synonym_input)) {
+          scalarize_col(as.list(synonym_input$Input))
+        } else {
+          rep(NA_character_, nrow(synonym_input))
+        },
+        stringsAsFactors = FALSE
+      )
+
+      synonym_input <- synonym_input %>%
+        dplyr::filter(!is.na(.data$Synonym) & .data$Synonym != "") %>%
+        dplyr::distinct(.data$Synonym, .data$Input, .keep_all = TRUE)
+      if (nrow(synonym_input) == 0) {
+        return(NA)
+      }
+      tryCatch(
+        metLinkR:::queryRefMet(
+        input_df = synonym_input,
         filename = paste0("synonym_table_",myinputfiles_list[[i]]$ShortFileName),
         HMDB_col = NA,
         metab_col = "Synonym",
@@ -144,8 +186,30 @@ harmonizeInputSheets <- function(inputcsv,
         KEGG_col = NA,
         LM_col = NA,
         CHEBI_col = NA
-      )
-  }
+      ),
+      error = function(e) {
+        utils::write.csv(
+          synonym_input,
+          file = paste0(
+            "metLinkR_output/debug_synonym_input_",
+            myinputfiles_list[[i]]$ShortFileName,
+            ".csv"
+          ),
+          row.names = FALSE
+        )
+        stop(
+          paste0(
+            "Synonym re-query failed for ",
+            myinputfiles_list[[i]]$ShortFileName,
+            ". Debug input written to metLinkR_output/debug_synonym_input_",
+            myinputfiles_list[[i]]$ShortFileName,
+            ".csv. Original error: ",
+            conditionMessage(e)
+          ),
+          call. = FALSE
+        )
+      })
+  })
   
   refmet_mapped_synonyms <- list()
   for (i in 1:length(mapped_list_synonyms)) {
@@ -189,6 +253,18 @@ harmonizeInputSheets <- function(inputcsv,
       }
     }
   },x = list_input_files, y = refmet_mapped_synonyms, SIMPLIFY = FALSE)
+  refmet_mapped_synonyms <- lapply(refmet_mapped_synonyms, function(x) {
+    if (!is.data.frame(x) || nrow(x) == 0) {
+      return(NA)
+    }
+    x <- x %>%
+      dplyr::filter(!is.na(.data$rownum)) %>%
+      dplyr::distinct()
+    if (nrow(x) == 0) {
+      return(NA)
+    }
+    filter_hits(x, majority_vote = majority_vote)
+  })
   message("(4/5) Queried RaMP synonyms in RefMet")
 
   mapped_input_list <- mapply(function(x, y) {
@@ -286,13 +362,11 @@ harmonizeInputSheets <- function(inputcsv,
   write_txt_log(start_time,myinputfiles)
 
   ## Write PDF report
-  names(mapping_rates[[2]]) = names(mapped_list_input_files) =
-    names(mapped_list_synonyms) = myinputfiles$ShortFileName
+  names(mapping_rates[[2]]) = names(mapped_input_list) = myinputfiles$ShortFileName
   write_html_report(mapping_rates,
-                   mapped_list_input_files,
-                   mapped_list_synonyms,
+                   mapped_input_list,
                    mapping_library_long)
 
-  print("(5/5) Wrote output files to metLinkR_output/")
-  return(mapping_library)
+  message("(5/5) Wrote output files to metLinkR_output/")
+  invisible(mapping_library)
 }
